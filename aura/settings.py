@@ -40,9 +40,9 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # aura apps
-    # 'todos',
-    # 'reminders',
-    # 'display',
+    'todos',
+    'reminders',
+    'display',
 ]
 
 MIDDLEWARE = [

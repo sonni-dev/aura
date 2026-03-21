@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>aura</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:         #080b10;
+      --surface:    #0d1117;
+      --border:     #1c2333;
+      --muted:      #3d4a5c;
+      --text-dim:   #6b7a90;
+      --text:       #c9d4e0;
+      --text-bright:#eef2f7;
+      --accent:     #4f9cf9;
+      --accent-dim: #1a3a5c;
+      --green:      #3ecf8e;
+      --amber:      #f0a429;
+      --red:        #f06060;
+      --urgent-glow:rgba(240, 96, 96, 0.15);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      overflow: hidden;
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Layout ─────────────────────────────── */
+    .shell {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      grid-template-columns: 1fr 420px;
+      grid-template-areas:
+        "header  header"
+        "todos   reminders";
+      height: 100vh;
+      gap: 0;
+    }
+
+    /* ── Header ─────────────────────────────── */
+    header {
+      grid-area: header;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 48px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .wordmark {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.5rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .wordmark span {
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    .clock-block {
+      text-align: right;
+    }
+
+    #clock-time {
+      font-family: 'Syne', sans-serif;
+      font-size: 2.8rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+
+    #clock-date {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* ── Panels ─────────────────────────────── */
+    .panel {
+      padding: 36px 48px;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+    .panel::-webkit-scrollbar { display: none; }
+
+    .panel-todos    { grid-area: todos; border-right: 1px solid var(--border); }
+    .panel-reminders { grid-area: reminders; background: var(--surface); }
+
+    .panel-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .panel-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Todo items ─────────────────────────── */
+    .todo-list { display: flex; flex-direction: column; gap: 2px; }
+
+    .todo-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 14px 16px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      position: relative;
+    }
+    .todo-item:hover {
+      background: var(--surface);
+      border-color: var(--border);
+    }
+
+    .todo-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 5px;
+      border: 2px solid var(--muted);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .todo-item:hover .todo-dot { border-color: var(--green); }
+    .todo-item.priority-high .todo-dot   { border-color: var(--red);   }
+    .todo-item.priority-medium .todo-dot { border-color: var(--amber); }
+    .todo-item.priority-low .todo-dot    { border-color: var(--muted); }
+
+    .todo-body { flex: 1; min-width: 0; }
+
+    .todo-title {
+      font-size: 1.05rem;
+      color: var(--text-bright);
+      line-height: 1.4;
+      font-weight: 400;
+    }
+
+    .todo-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 5px;
+    }
+
+    .tag {
+      font-size: 0.62rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 3px;
+    }
+    .tag-high   { background: rgba(240,96,96,0.12);  color: var(--red);   }
+    .tag-medium { background: rgba(240,164,41,0.12); color: var(--amber); }
+    .tag-low    { background: rgba(107,122,144,0.12);color: var(--text-dim); }
+    .tag-overdue{ background: rgba(240,96,96,0.2);   color: var(--red); font-weight:500; }
+
+    .todo-due {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+    }
+    .todo-due.overdue { color: var(--red); }
+
+    .empty-state {
+      color: var(--muted);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 60px 0;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── Reminder items ─────────────────────── */
+    .reminder-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .reminder-item {
+      padding: 16px 18px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .reminder-item.urgent {
+      border-color: var(--red);
+      background: var(--urgent-glow);
+      animation: pulse-border 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-border {
+      0%, 100% { border-color: var(--red); }
+      50%       { border-color: rgba(240,96,96,0.4); }
+    }
+
+    .reminder-time {
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+    .reminder-item.urgent .reminder-time { color: var(--red); }
+
+    .reminder-title {
+      font-size: 0.95rem;
+      color: var(--text-bright);
+      line-height: 1.4;
+    }
+
+    .reminder-desc {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+
+    .reminder-badge {
+      font-size: 0.58rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-dim);
+      padding: 2px 7px;
+      border-radius: 3px;
+      display: inline-block;
+      margin-top: 6px;
+    }
+
+    .dismiss-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.9rem;
+      line-height: 1;
+      padding: 2px 5px;
+      border-radius: 3px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .dismiss-btn:hover { color: var(--red); background: rgba(240,96,96,0.1); }
+
+    /* ── Status bar ─────────────────────────── */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      font-size: 0.6rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      z-index: 10;
+    }
+
+    #sync-indicator { display: flex; align-items: center; gap: 6px; }
+    #sync-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+    #sync-dot.stale { background: var(--amber); }
+
+    /* ── Fade-in on load ────────────────────── */
+    .panel, header { animation: fadein 0.6s ease both; }
+    header         { animation-delay: 0s; }
+    .panel-todos   { animation-delay: 0.1s; }
+    .panel-reminders{ animation-delay: 0.2s; }
+    @keyframes fadein { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Header -->
+  <header>
+    <div class="wordmark">aura<span> / dashboard</span></div>
+    <div class="clock-block">
+      <div id="clock-time">--:--</div>
+      <div id="clock-date">loading...</div>
+    </div>
+  </header>
+
+  <!-- Todos panel -->
+  <section class="panel panel-todos">
+    <div class="panel-label">Tasks</div>
+    <div class="todo-list" id="todo-list">
+      {% if todos %}
+        {% for todo in todos %}
+        <div class="todo-item priority-{{ todo.priority }}" data-id="{{ todo.pk }}" onclick="completeTodo({{ todo.pk }}, this)">
+          <div class="todo-dot"></div>
+          <div class="todo-body">
+            <div class="todo-title">{{ todo.title }}</div>
+            <div class="todo-meta">
+              <span class="tag tag-{{ todo.priority }}">{{ todo.get_priority_display }}</span>
+              {% if todo.is_overdue %}
+                <span class="tag tag-overdue">overdue</span>
+              {% endif %}
+              {% if todo.due_date %}
+                <span class="todo-due {% if todo.is_overdue %}overdue{% endif %}">
+                  due {{ todo.due_date }}
+                </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">no open tasks</div>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- Reminders panel -->
+  <aside class="panel panel-reminders">
+    <div class="panel-label">Reminders</div>
+    <div class="reminder-list" id="reminder-list">
+      {% if reminders %}
+        {% for reminder in reminders %}
+        <div class="reminder-item {% if reminder.urgent %}urgent{% endif %}" id="reminder-{{ reminder.pk }}">
+          {% if reminder.recurrence == 'none' %}
+          <button class="dismiss-btn" onclick="dismissReminder({{ reminder.pk }})" title="Dismiss">✕</button>
+          {% endif %}
+          <div class="reminder-time">{{ reminder.remind_at|date:"D, M j · g:i A" }}</div>
+          <div class="reminder-title">{{ reminder.title }}</div>
+          {% if reminder.description %}
+          <div class="reminder-desc">{{ reminder.description }}</div>
+          {% endif %}
+          {% if reminder.recurrence != 'none' %}
+          <span class="reminder-badge">↺ {{ reminder.get_recurrence_display }}</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state" id="no-reminders">no upcoming reminders</div>
+      {% endif %}
+    </div>
+  </aside>
+
+</div>
+
+<!-- Status bar -->
+<div class="status-bar">
+  <span>aura v0.1</span>
+  <span id="sync-indicator">
+    <span id="sync-dot"></span>
+    <span id="sync-text">live</span>
+  </span>
+</div>
+
+<script>
+  // ── Clock ────────────────────────────────────
+  const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function updateClock() {
+    const now = new Date();
+    const h = now.getHours();
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    document.getElementById('clock-time').textContent = `${h12}:${m} ${ampm}`;
+    document.getElementById('clock-date').textContent =
+      `${DAYS[now.getDay()]}  ·  ${MONTHS[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ── CSRF helper ──────────────────────────────
+  function getCookie(name) {
+    const cookies = document.cookie.split(';');
+    for (const c of cookies) {
+      const [k, v] = c.trim().split('=');
+      if (k === name) return decodeURIComponent(v);
+    }
+    return null;
+  }
+
+  // ── Complete todo ────────────────────────────
+  function completeTodo(id, el) {
+    fetch(`/todos/${id}/toggle/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.completed) {
+        el.style.opacity = '0';
+        el.style.transform = 'translateX(-12px)';
+        el.style.transition = 'opacity 0.3s, transform 0.3s';
+        setTimeout(() => el.remove(), 320);
+      }
+    });
+  }
+
+  // ── Dismiss reminder ─────────────────────────
+  function dismissReminder(id) {
+    fetch(`/reminders/${id}/dismiss/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.active) {
+        const el = document.getElementById(`reminder-${id}`);
+        if (el) {
+          el.style.opacity = '0';
+          el.style.transition = 'opacity 0.3s';
+          setTimeout(() => el.remove(), 320);
+        }
+      }
+    });
+  }
+
+  // ── Auto-refresh data every 60s ──────────────
+  const syncDot  = document.getElementById('sync-dot');
+  const syncText = document.getElementById('sync-text');
+  let lastSync   = Date.now();
+
+  function refreshData() {
+    fetch('/data/')
+      .then(r => r.json())
+      .then(data => {
+        lastSync = Date.now();
+        syncDot.classList.remove('stale');
+        syncText.textContent = 'live';
+        rebuildTodos(data.todos);
+        rebuildReminders(data.reminders);
+      })
+      .catch(() => {
+        syncDot.classList.add('stale');
+        syncText.textContent = 'offline';
+      });
+  }
+
+  function rebuildTodos(todos) {
+    const list = document.getElementById('todo-list');
+    if (!todos.length) {
+      list.innerHTML = '<div class="empty-state">no open tasks</div>';
+      return;
+    }
+    list.innerHTML = todos.map(t => `
+      <div class="todo-item priority-${t.priority}" data-id="${t.id}" onclick="completeTodo(${t.id}, this)">
+        <div class="todo-dot"></div>
+        <div class="todo-body">
+          <div class="todo-title">${t.title}</div>
+          <div class="todo-meta">
+            <span class="tag tag-${t.priority}">${capitalize(t.priority)}</span>
+            ${t.is_overdue ? '<span class="tag tag-overdue">overdue</span>' : ''}
+            ${t.due_date ? `<span class="todo-due ${t.is_overdue ? 'overdue' : ''}">due ${t.due_date}</span>` : ''}
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  function rebuildReminders(reminders) {
+    const list = document.getElementById('reminder-list');
+    if (!reminders.length) {
+      list.innerHTML = '<div class="empty-state" id="no-reminders">no upcoming reminders</div>';
+      return;
+    }
+    list.innerHTML = reminders.map(r => {
+      const dt = new Date(r.remind_at);
+      const timeStr = dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' })
+                    + ' · ' + dt.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+      return `
+        <div class="reminder-item ${r.urgent ? 'urgent' : ''}" id="reminder-${r.id}">
+          ${r.recurrence === 'none' ? `<button class="dismiss-btn" onclick="dismissReminder(${r.id})" title="Dismiss">✕</button>` : ''}
+          <div class="reminder-time">${timeStr}</div>
+          <div class="reminder-title">${r.title}</div>
+          ${r.description ? `<div class="reminder-desc">${r.description}</div>` : ''}
+          ${r.recurrence !== 'none' ? `<span class="reminder-badge">↺ ${capitalize(r.recurrence)}</span>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  setInterval(refreshData, 60000);
+
+  // Mark stale if no sync in 3 minutes
+  setInterval(() => {
+    if (Date.now() - lastSync > 180000) {
+      syncDot.classList.add('stale');
+      syncText.textContent = 'stale';
+    }
+  }, 30000);
+</script>
+</body>
+</html>
