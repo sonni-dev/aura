@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+.venv/
+env/
+.env/
+
+# Secrets
+.env
+
+# SQLite database
+*.sqlite3
+db.sqlite3
+aura.db
+
+# User-uploaded media and generated static files
+media/
+static/
+
+# Sensitive configuration files (use environment variables instead)
+local_settings.py
+
+# IDE-specific files and folders
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store # macOS specific
