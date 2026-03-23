@@ -146,4 +146,18 @@ class RoutineItem(models.Model):
                 break
         return streak
     
+
+class RoutineCompletion(models.Model):
+    item = models.ForeignKey(RoutineItem, on_delete=models.CASCADE, related_name='completions')
+    completed_on = models.DateField(default=date.today)
+    completed_at = models.DateTimeField(auto_now_add=True)
+
     
+    class Meta:
+        unique_together = ('item', 'completed_on')
+        ordering = ['-completed_on']
+        verbose_name = 'Completion'
+        verbose_name_plural = 'Completions'
+    
+    def __str__(self):
+        return f'{self.item} -- {self.completed_on}'
