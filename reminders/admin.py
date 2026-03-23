@@ -21,10 +21,12 @@ class ReminderAdmin(admin.ModelAdmin):
     def status_display(self, obj):
         now = timezone.now()
         if not obj.active:
-            return format_html('<span style="color:#6b7280">Inactive</span>')
+            return format_html('<span style="color:{}">{}</span>', '#6b7280', 'Inactive')
         if obj.remind_at < now:
-            return format_html('<span style="color:#ef4444">Past due</span>')
+            return format_html('<span style="color:{}">{}</span>', '#ef4444', 'Past due')
         if obj.is_upcoming_today:
-            return format_html('<span style="color:#10b981; font-weight:bold">Today</span>')
-        return format_html('<span style="color:#60a5fa">Upcoming</span>')
+            return format_html('<span style="color:{}"; font-weight:bold">{}</span>', '#10b981', 'Today')
+        
+        return format_html('<span style="color:{}">{}</span>', '#60a5fa', 'Upcoming')
+    
     status_display.short_description = 'Status'
