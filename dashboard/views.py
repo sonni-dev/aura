@@ -175,3 +175,35 @@ def goals_api(request):
     return JsonResponse({'goals': data})
 
 
+# ── /api/reminders/upcoming/ ─────────────────────────────────────────────────
+ 
+def reminders_upcoming_api(request):
+    """
+    Returns the next N active reminders ordered by next_run.
+    Flags urgent reminders (due within 15 minutes).
+    """
+    limit = int(request.GET.get('limit', 8))
+    reminders = Reminder.objects.filter(is_active=True).order_by('next_run')[:limit]
+
+    data = []
+    for r in reminders:
+        # Resolve source label
+        source = r.source
+        source_label = None
+        if source:
+            source_label = getattr(source, 'name', None) or getattr(source, 'title', None)
+
+        data.append({
+            'id': r.id,
+            'title': r.title,
+            'frequency': r.frequency,
+            'channel': r.channel,
+            'next_run': r.next_run.isoformat() if r.next_run else None,
+            'is_urgent': r.is_urgent,
+            'is_due': r.is_due,
+            'source_label': source_label,
+        })
+    
+    return JsonResponse({'reminders': data})
+
+
