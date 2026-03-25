@@ -163,10 +163,16 @@ class Routine(models.Model):
 
 
 class RoutineItem(models.Model):
+    """
+    A single action inside a Routine (e.g. 'Walk Doby', 'Brush teeth').
+    Completions are tracked per-day via RoutineCompletion.
+    """
+
     routine = models.ForeignKey(Routine, on_delete=models.CASCADE, related_name='items')
     title = models.CharField(max_length=200)
+    category = models.CharField(max_length=15, choices=CATEGORY_CHOICES, blank=True)
     order = models.PositiveIntegerField(default=0)
-    active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
 
 
     class Meta:
@@ -180,6 +186,17 @@ class RoutineItem(models.Model):
     def is_done_today(self, for_date=None):
         d = for_date or timezone.now().date()
         return RoutineCompletion.objects.filter(item=self, completed_on=d).exists()
+    
+    def toggle_today(self, for_date=None):
+        """Mark complete if not done; undo if already done. Returns new state."""
+        d = for_date or timezone.now().date()
+        completion, created = RoutineCompletion.objects.get_or_create(
+            item=self, completed_on=d
+        )
+        if not created:
+            completion.delete()
+            return False
+        return True
     
     def item_streak(self, for_date=None):
         """Consecutive days this individual item was completed (before today)"""
@@ -195,6 +212,11 @@ class RoutineItem(models.Model):
     
 
 class RoutineCompletion(models.Model):
+    """
+    Records that a RoutineItem was completed on a specific calendar date.
+    The unique_together constraint prevents double-logging.
+    """
+
     item = models.ForeignKey(RoutineItem, on_delete=models.CASCADE, related_name='completions')
     completed_on = models.DateField(default=date.today)
     completed_at = models.DateTimeField(auto_now_add=True)
@@ -203,8 +225,8 @@ class RoutineCompletion(models.Model):
     class Meta:
         unique_together = ('item', 'completed_on')
         ordering = ['-completed_on']
-        verbose_name = 'Completion'
-        verbose_name_plural = 'Completions'
+        verbose_name = 'Routine Completion'
+        verbose_name_plural = 'Routine Completions'
     
     def __str__(self):
         return f'{self.item} -- {self.completed_on}'
