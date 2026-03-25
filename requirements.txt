@@ -1,0 +1,5 @@
+django
+python-dateutil
+celery
+django-celery-beat
+redis

@@ -20,7 +20,5 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # path('', include('display.urls')),
-    # path('todos/', include('todos.urls')),
-    # path('reminders/', include('reminders.urls')),
+    path('', include('dashboard.urls')),
 ]
