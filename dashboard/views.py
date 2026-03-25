@@ -145,3 +145,33 @@ def habits_week_api(request):
     return JsonResponse({'habits': data})
 
 
+# ── /api/goals/ ───────────────────────────────────────────────────────────────
+ 
+def goals_api(request):
+    """
+    Returns active goals with completion percentage and stall status.
+    Used by the goal progress bars panel.
+    """
+    goals = Goal.objects.filter(is_active=True, is_complete=False).order_by(
+        '-priority',
+        'due_date'
+    ).prefetch_related('items')
+
+    data = []
+    for goal in goals:
+        data.append({
+            'id': goal.id,
+            'name': goal.name,
+            'category': goal.category,
+            'priority': goal.priority,
+            'pct': goal.completion_pct(),
+            'due_date': goal.due_date.isoformat() if goal.due_date else None,
+            'is_overdue': goal.is_overdue,
+            'days_since_progress': goal.days_since_progress,
+            'items_total': goal.items.filter(is_active=True).count(),
+            'items_done': goal.items.filter(is_active=True, is_complete=True).count(),
+        })
+    
+    return JsonResponse({'goals': data})
+
+
