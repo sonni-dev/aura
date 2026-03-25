@@ -64,3 +64,42 @@ def stats_api(request):
         'active_streaks': active_streaks,
     })
 
+
+# ── /api/routines/today/ ──────────────────────────────────────────────────────
+ 
+def routines_today_api(request):
+    """
+    Returns all routines scheduled for today with their completion progress
+    and streak count. Used by the routine rings panel.
+    """
+    today = timezone.now().date()
+    routines = Routine.objects.filter(is_active=True).prefetch_related('items')
+
+    data = []
+    for routine in routines:
+        if not routine.runs_today(today):
+            continue
+        done, total = routine.today_progress(today)
+        data.append({
+            'id': routine.id,
+            'name': routine.name,
+            'slot': routine.slot,
+            'days': routine.day_labels(),
+            'done': done,
+            'total': total,
+            'pct': routine.completion_pct(today),
+            'streak': routine.streak(today),
+            'items': [
+                {
+                    'id': item.id,
+                    'title': item.title,
+                    'category': item.category,
+                    'done': item.is_done_today(today),
+                }
+                for item in routine.items.filter(is_active=True).order_by('order')
+            ],
+        })
+
+    return JsonResponse({
+        'routines': data,
+    })
