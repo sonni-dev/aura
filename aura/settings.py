@@ -42,7 +42,6 @@ INSTALLED_APPS = [
     # aura apps
     'reminders',
     'routines',
-    # Reworked
     'tasks',
     'goals',
     'habits',
