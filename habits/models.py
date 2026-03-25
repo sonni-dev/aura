@@ -155,3 +155,36 @@ class Habit(models.Model):
         return streak
 
 
+class HabitLog(models.Model):
+    """
+    One record per habit per day. The unique_together constraint prevents
+    duplicate entries. Only one of yn_value / scale_value will be populated
+    depending on the parent Habit's metric_type.
+    """
+
+    habit = models.ForeignKey(Habit, on_delete=models.CASCADE, related_name='logs')
+    logged_on = models.DateField(default=date.today)
+    
+    yn_value = models.BooleanField(null=True, blank=True, help_text='Set for yes/no habits. True = done, False = not done.')
+    scale_value = models.IntegerField(null=True, blank=True, help_text='Set for scale habits. Integer 1-10.')
+
+    logged_at = models.DateTimeField(auto_now_add=True)
+
+
+    class Meta:
+        unique_together = ('habit', 'logged_on')
+        ordering = ['-logged_on']
+        verbose_name = 'Habit Log'
+        verbose_name_plural = 'Habit Logs'
+
+    def __str__(self):
+        return f'{self.habit.name} — {self.logged_on}'
+    
+
+    def display_value(self):
+        """Human-readable log value for admin and API serialization."""
+        if self.habit.metric_type == Habit.METRIC_YN:
+            if self.yn_value is None:
+                return '—'
+            return 'yes' if self.yn_value else 'no'
+        return str(self.scale_value) if self.scale_value is not None else '—'
