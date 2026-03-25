@@ -238,3 +238,44 @@ def tasks_upcoming_api(request):
     return JsonResponse({'tasks': data})
 
 
+# ── /api/calendar/events/ ────────────────────────────────────────────────────
+ 
+def calendar_events_api(request):
+    """
+    Returns Reminders as FullCalendar-compatible JSON events.
+    Accepts ?start=...&end=... from FullCalendar's date range fetch.
+    """
+    start = request.GET.get('start')
+    end = request.GET.get('end')
+
+    qs = Reminder.objects.filter(is_active=True)
+    if start:
+        qs = qs.filter(next_run__gte=start)
+    if end:
+        qs = qs.filter(next_run__lte=end)
+    
+    COLOR_MAP = {
+        Reminder.FREQ_DAILY:   '#3ecf8e',
+        Reminder.FREQ_WEEKLY:  '#9b8cf5',
+        Reminder.FREQ_MONTHLY: '#f0a429',
+        Reminder.FREQ_ONCE:    '#3fd4f4',
+        Reminder.FREQ_CUSTOM:  '#b8ff47',
+    }
+
+    events = [
+        {
+            'id': r.id,
+            'title': r.title,
+            'start': r.next_run.isoformat(),
+            'color': COLOR_MAP.get(r.frequency, '#888888'),
+            'extendedProps': {
+                'frequency': r.frequency,
+                'description': r.description,
+                'channel': r.channel,
+            },
+        }
+        for r in qs
+    ]
+
+    return JsonResponse(events, safe=False)
+
