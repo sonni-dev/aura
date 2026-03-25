@@ -106,3 +106,68 @@ class Goal(models.Model):
         return (timezone.now().date() - self.last_progress).days
 
 
+class GoalItem(models.Model):
+    """
+    A concrete step, milestone, or blocking task within a Goal.
+ 
+    item_type lets you distinguish tasks from milestones so the dashboard
+    can render a timeline vs. a simple checklist depending on type mix.
+    """
+
+    TYPE_TASK      = 'task'
+    TYPE_MILESTONE = 'milestone'
+    TYPE_BLOCKING  = 'blocking'
+    TYPE_CHOICES   = [
+        (TYPE_TASK,      'Task'),
+        (TYPE_MILESTONE, 'Milestone'),
+        (TYPE_BLOCKING,  'Blocking Task'),
+    ]
+
+    goal = models.ForeignKey(Goal, on_delete=models.CASCADE, related_name='items')
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    
+    item_type = models.CharField(max_length=10, choices=TYPE_CHOICES, default=TYPE_TASK)
+    priority = models.CharField(max_length=15, choices=PRIORITY_CHOICES, blank=True)
+    due_date = models.DateField(null=True, blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    is_active = models.BooleanField(default=True, help_text='Uncheck to move item to back burner without deleting.')
+    is_complete = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+    class Meta:
+        ordering = ['order', 'due_date', 'name']
+        verbose_name = 'Goal Item'
+        verbose_name_plural = 'Goal Items'
+    
+    def __str__(self):
+        return f'{self.goal.name} > {self.name}'
+    
+
+    def mark_complete(self):
+        """
+        Mark this item complete, update Goal.last_progress, then check
+        whether the parent Goal itself is now fully complete.
+        """
+        self.is_complete  = True
+        self.completed_at = timezone.now()
+        self.save()
+ 
+        # Keep last_progress current on the parent goal
+        goal = self.goal
+        goal.last_progress = timezone.now().date()
+        goal.save(update_fields=['last_progress', 'updated_at'])
+ 
+        # Auto-complete the goal if all items are done
+        goal.check_completion()
+    
+    @property
+    def is_overdue(self):
+        if self.due_date and not self.is_complete:
+            return self.due_date < timezone.now().date()
+        return False
