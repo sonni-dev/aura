@@ -103,3 +103,45 @@ def routines_today_api(request):
     return JsonResponse({
         'routines': data,
     })
+
+
+# ── /api/habits/week/ ─────────────────────────────────────────────────────────
+ 
+def habits_week_api(request):
+    """
+    Returns all active habits with their 7-day log for the current week
+    (Mon-Sun). Used by the habit dot-grid panel.
+ 
+    Each day entry is either null (not logged) or an object with the value.
+    """
+    habits = Habit.objects.filter(is_active=True).order_by('order', 'name')
+
+    data = []
+    for habit in habits:
+        week_logs = habit.logs_for_week()  # List of 7 HabitLog-or-None
+        days = []
+        for log in week_logs:
+            if log is None:
+                days.append(None)
+            elif habit.metric_type == Habit.METRIC_YN:
+                days.append({
+                    'done': log.yn_value,
+                    'value': log.display_value()
+                })
+            else:
+                days.append({
+                    'done': log.scale_value is not None, 
+                    'value': log.display_value()
+                })
+        data.append({
+            'id': habit.id,
+            'name': habit.name,
+            'metric_type': habit.metric_type,
+            'streak': habit.streak(),
+            'rate_30': habit.completion_rate(30),
+            'days': days,   # index 0 = Monday
+            'logged_today': habit.is_logged_today(),
+        })
+    return JsonResponse({'habits': data})
+
+
