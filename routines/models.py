@@ -83,7 +83,7 @@ class Routine(models.Model):
         default='mon,tue,wed,thu,fri,sat,sun',
         help_text='Comma-separated day codes: mon,tue,wed,thu,fri,sat,sun'
     )
-    active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
     order = models.PositiveIntegerField(default=0, help_text='Display order within slot on the dashboard.')
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -121,7 +121,7 @@ class Routine(models.Model):
     def today_progress(self, for_date=None):
         """Returns (completed_count, total_count) for active items today"""
         d = for_date or timezone.now().date()
-        items = self.items.filter(active=True)
+        items = self.items.filter(is_active=True)
         total = items.count()
         done = RoutineCompletion.objects.filter(
             item__in=items, completed_on=d
@@ -141,7 +141,7 @@ class Routine(models.Model):
         Today is not counted -- it may still be in progress.
         """
         d = (for_date or timezone.now().date()) - timedelta(days=1)
-        items = list(self.items.filter(active=True))
+        items = list(self.items.filter(is_active=True))
         item_count = len(items)
         if item_count == 0:
             return 0
