@@ -207,3 +207,34 @@ def reminders_upcoming_api(request):
     return JsonResponse({'reminders': data})
 
 
+# ── /api/tasks/upcoming/ ─────────────────────────────────────────────────────
+ 
+def tasks_upcoming_api(request):
+    """
+    Returns upcoming incomplete tasks ordered by due date.
+    Includes overdue tasks first.
+    """
+    limit = int(request.GET.get('limit', 8))
+    tasks = Task.objects.filter(
+        is_active=True,
+        is_complete=False,
+    ).order_by('due_date', '-priority')[:limit]
+
+    today = timezone.now().date()
+    data = []
+    for t in tasks:
+        data.append({
+            'id': t.id,
+            'name': t.name,
+            'priority': t.priority,
+            'category': t.category,
+            'energy_type': t.energy_type,
+            'where_task': t.where_task,
+            'due_date': t.due_date.isoformat() if t.due_date else None,
+            'is_overdue': t.is_overdue,
+            'status': t.status,
+        })
+    
+    return JsonResponse({'tasks': data})
+
+
