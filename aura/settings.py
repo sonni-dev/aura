@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     # Reworked
     'tasks',
     'goals',
+    'habits',
 ]
 
 MIDDLEWARE = [
