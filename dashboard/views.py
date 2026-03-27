@@ -10,7 +10,7 @@ from reminders.models import Reminder
 
 
 class HudView(TemplateView):
-    template_name = 'dashboard/hud3.html'
+    template_name = 'dashboard/hud.html'
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
