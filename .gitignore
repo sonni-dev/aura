@@ -30,3 +30,5 @@ local_settings.py
 *.swp
 *.swo
 .DS_Store # macOS specific
+
+.scratch-archive/
