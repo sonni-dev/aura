@@ -1,281 +1,289 @@
+import json
+from datetime import timedelta
+
 from django.http import JsonResponse
 from django.views.generic import TemplateView
 from django.utils import timezone
- 
+
 from tasks.models import Task
-from routines.models import Routine, RoutineCompletion
-from habits.models import Habit, HabitLog
+from routines.models import Routine
+from habits.models import Habit
 from goals.models import Goal
 from reminders.models import Reminder
 
-from datetime import timedelta
-
 
 class HudView(TemplateView):
-    template_name = 'dashboard/hud.html'
+    """
+    Primary dashboard view. All panel data is rendered server-side and
+    passed to the template as both Django context variables and JSON
+    script blocks (for ApexCharts). Zero loading states on first paint.
+
+    JavaScript handles: clock, weather, ApexCharts rendering,
+    and 60s periodic refresh via the JSON API endpoints.
+    """
+
+    template_name = 'dashboard/hud2.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.now().date()
+        now   = timezone.now()
+
+        # ── Stat cards ────────────────────────────────────────────────────
+        context['tasks_due_today']   = Task.objects.filter(
+            is_active=True, is_complete=False, due_date=today).count()
+        context['tasks_overdue']     = Task.objects.filter(
+            is_active=True, is_complete=False, due_date__lt=today).count()
+        context['reminders_active']  = Reminder.objects.filter(is_active=True).count()
+        context['reminders_due_now'] = Reminder.objects.filter(
+            is_active=True, next_run__lte=now).count()
+
+        thirty_ago   = today - timedelta(days=30)
+        completed_30 = Task.objects.filter(
+            is_complete=True, completed_at__date__gte=thirty_ago).count()
+        total_active = Task.objects.filter(is_active=True).count()
+        context['completion_rate'] = (
+            round((completed_30 / total_active) * 100) if total_active else 0)
+
+        # Sparkline: completions each day for last 7 days
+        sparkline = []
+        for i in range(6, -1, -1):
+            d = today - timedelta(days=i)
+            sparkline.append(
+                Task.objects.filter(is_complete=True, completed_at__date=d).count())
+        context['tasks_sparkline_json'] = json.dumps(sparkline)
+
+        # ── Routines ──────────────────────────────────────────────────────
+        routines_today = []
+        for r in Routine.objects.filter(is_active=True).prefetch_related('items'):
+            if not r.runs_today(today):
+                continue
+            done, total = r.today_progress(today)
+            routines_today.append({
+                'id':           r.id,
+                'name':         r.name,
+                'slot':         r.slot,
+                'slot_display': r.get_slot_display(),
+                'pct':          r.completion_pct(today),
+                'streak':       r.streak(today),
+                'done':         done,
+                'total':        total,
+                'items': [
+                    {'id': i.id, 'title': i.title,
+                     'category': i.category, 'done': i.is_done_today(today)}
+                    for i in r.items.filter(is_active=True).order_by('order')
+                ],
+            })
+
+        context['routines_today']        = routines_today
+        context['routines_json']         = json.dumps(routines_today)
+        context['active_streaks']        = sum(1 for r in routines_today if r['streak'] > 0)
+        context['max_streak']            = max((r['streak'] for r in routines_today), default=0)
+        context['routines_pct_json']     = json.dumps([r['pct']  for r in routines_today])
+        context['routines_labels_json']  = json.dumps([r['name'] for r in routines_today])
+
+        # ── Habits ────────────────────────────────────────────────────────
+        habits_data = []
+        for h in Habit.objects.filter(is_active=True).order_by('order', 'name'):
+            week_logs = h.logs_for_week(today)
+            days = []
+            for log in week_logs:
+                if log is None:
+                    days.append(None)
+                elif h.metric_type == Habit.METRIC_YN:
+                    days.append({'done': log.yn_value, 'value': log.display_value()})
+                else:
+                    days.append({
+                        'done':  log.scale_value is not None,
+                        'value': log.display_value()})
+            habits_data.append({
+                'id':           h.id,
+                'name':         h.name,
+                'metric_type':  h.metric_type,
+                'streak':       h.streak(today),
+                'rate_30':      h.completion_rate(30),
+                'days':         days,
+                'logged_today': h.is_logged_today(today),
+            })
+
+        context['habits_json']         = json.dumps(habits_data)
+        context['habits_logged_today'] = sum(1 for h in habits_data if h['logged_today'])
+        context['habits_total']        = len(habits_data)
+
+        # ── Goals ─────────────────────────────────────────────────────────
+        goals_data = []
+        for g in (Goal.objects
+                  .filter(is_active=True, is_complete=False)
+                  .order_by('-priority', 'due_date')
+                  .prefetch_related('items')[:6]):
+            goals_data.append({
+                'id':                  g.id,
+                'name':                g.name,
+                'category':            g.category,
+                'priority':            g.priority,
+                'pct':                 g.completion_pct(),
+                'due_date':            g.due_date.strftime('%b %d') if g.due_date else None,
+                'is_overdue':          g.is_overdue,
+                'days_since_progress': g.days_since_progress,
+                'items_total':         g.items.filter(is_active=True).count(),
+                'items_done':          g.items.filter(is_active=True, is_complete=True).count(),
+            })
+        context['goals']      = goals_data
+        context['goals_json'] = json.dumps(goals_data)
+
+        # ── Reminders ─────────────────────────────────────────────────────
+        reminders_data = []
+        for r in Reminder.objects.filter(is_active=True).order_by('next_run')[:8]:
+            reminders_data.append({
+                'id':        r.id,
+                'title':     r.title,
+                'frequency': r.frequency,
+                'channel':   r.channel,
+                'next_run':  r.next_run.strftime('%b %d · %I:%M %p') if r.next_run else '—',
+                'is_urgent': r.is_urgent,
+                'is_due':    r.is_due,
+            })
+        context['reminders']      = reminders_data
+        context['reminders_json'] = json.dumps(reminders_data)
+
+        # ── Upcoming tasks ────────────────────────────────────────────────
+        tasks_data = []
+        for t in (Task.objects
+                  .filter(is_active=True, is_complete=False)
+                  .order_by('due_date', '-priority')[:10]):
+            tasks_data.append({
+                'id':             t.id,
+                'name':           t.name,
+                'priority':       t.priority,
+                'category':       t.get_category_display() if t.category else '—',
+                'energy_type':    t.energy_type,
+                'due_date':       t.due_date.strftime('%b %d') if t.due_date else '—',
+                'is_overdue':     t.is_overdue,
+                'status':         t.status,
+                'status_display': t.get_status_display(),
+            })
+        context['upcoming_tasks']      = tasks_data
+        context['upcoming_tasks_json'] = json.dumps(tasks_data)
+
+        context['today'] = today
+        context['now']   = now
+        return context
 
 
-## ---------- API calls for stats ---------- ##
-
-
-# ── /api/stats/ ───────────────────────────────────────────────────────────────
+# ── JSON API endpoints ────────────────────────────────────────────────────────
 
 def stats_api(request):
-    """
-    Aggregate counts for the four stat cards at the top of the HUD.
-    """
     today = timezone.now().date()
-
-    tasks_due_today = Task.objects.filter(
-        is_active=True,
-        is_complete=False,
-        due_date=today,
-    ).count()
-
-    tasks_overdue = Task.objects.filter(
-        is_active=True,
-        is_complete=False,
-        due_date__lt=today,
-    ).count()
-
-    active_reminders = Reminder.objects.filter(is_active=True).count()
-
-    # Completion rate: tasks completed in last 30 days vs total active tasks
-    thirty_days_ago = today - timedelta(days=30)
-    completed_30 = Task.objects.filter(
-        is_complete=True,
-        completed_at__date__gte=thirty_days_ago,
-    ).count()
-
+    now   = timezone.now()
+    from datetime import timedelta
+    thirty_ago   = today - timedelta(days=30)
+    completed_30 = Task.objects.filter(is_complete=True, completed_at__date__gte=thirty_ago).count()
     total_active = Task.objects.filter(is_active=True).count()
-    completion_rate = (
-        round((completed_30 / total_active) * 100) if total_active else 0
-    )
-
-    # Count active goal streaks (routines w streak > 0)
     routines_today = [r for r in Routine.objects.filter(is_active=True) if r.runs_today()]
-    active_streaks = sum(1 for r in routines_today if r.streak() > 0)
-
     return JsonResponse({
-        'tasks_due_today': tasks_due_today,
-        'tasks_overdue': tasks_overdue,
-        'active_reminders': active_reminders,
-        'completion_rate': completion_rate,
-        'active_streaks': active_streaks,
+        'tasks_due_today':  Task.objects.filter(is_active=True, is_complete=False, due_date=today).count(),
+        'tasks_overdue':    Task.objects.filter(is_active=True, is_complete=False, due_date__lt=today).count(),
+        'active_reminders': Reminder.objects.filter(is_active=True).count(),
+        'completion_rate':  round((completed_30/total_active)*100) if total_active else 0,
+        'active_streaks':   sum(1 for r in routines_today if r.streak() > 0),
     })
 
 
-# ── /api/routines/today/ ──────────────────────────────────────────────────────
- 
 def routines_today_api(request):
-    """
-    Returns all routines scheduled for today with their completion progress
-    and streak count. Used by the routine rings panel.
-    """
     today = timezone.now().date()
-    routines = Routine.objects.filter(is_active=True).prefetch_related('items')
-
-    data = []
-    for routine in routines:
-        if not routine.runs_today(today):
+    data  = []
+    for r in Routine.objects.filter(is_active=True).prefetch_related('items'):
+        if not r.runs_today(today):
             continue
-        done, total = routine.today_progress(today)
+        done, total = r.today_progress(today)
         data.append({
-            'id': routine.id,
-            'name': routine.name,
-            'slot': routine.slot,
-            'days': routine.day_labels(),
-            'done': done,
-            'total': total,
-            'pct': routine.completion_pct(today),
-            'streak': routine.streak(today),
-            'items': [
-                {
-                    'id': item.id,
-                    'title': item.title,
-                    'category': item.category,
-                    'done': item.is_done_today(today),
-                }
-                for item in routine.items.filter(is_active=True).order_by('order')
-            ],
+            'id': r.id, 'name': r.name, 'slot': r.slot,
+            'done': done, 'total': total,
+            'pct': r.completion_pct(today), 'streak': r.streak(today),
+            'items': [{'id': i.id, 'title': i.title, 'done': i.is_done_today(today)}
+                      for i in r.items.filter(is_active=True).order_by('order')],
         })
-
-    return JsonResponse({
-        'routines': data,
-    })
+    return JsonResponse({'routines': data})
 
 
-# ── /api/habits/week/ ─────────────────────────────────────────────────────────
- 
 def habits_week_api(request):
-    """
-    Returns all active habits with their 7-day log for the current week
-    (Mon-Sun). Used by the habit dot-grid panel.
- 
-    Each day entry is either null (not logged) or an object with the value.
-    """
-    habits = Habit.objects.filter(is_active=True).order_by('order', 'name')
-
     data = []
-    for habit in habits:
-        week_logs = habit.logs_for_week()  # List of 7 HabitLog-or-None
+    for h in Habit.objects.filter(is_active=True).order_by('order', 'name'):
+        week_logs = h.logs_for_week()
         days = []
         for log in week_logs:
             if log is None:
                 days.append(None)
-            elif habit.metric_type == Habit.METRIC_YN:
-                days.append({
-                    'done': log.yn_value,
-                    'value': log.display_value()
-                })
+            elif h.metric_type == Habit.METRIC_YN:
+                days.append({'done': log.yn_value, 'value': log.display_value()})
             else:
-                days.append({
-                    'done': log.scale_value is not None, 
-                    'value': log.display_value()
-                })
+                days.append({'done': log.scale_value is not None, 'value': log.display_value()})
         data.append({
-            'id': habit.id,
-            'name': habit.name,
-            'metric_type': habit.metric_type,
-            'streak': habit.streak(),
-            'rate_30': habit.completion_rate(30),
-            'days': days,   # index 0 = Monday
-            'logged_today': habit.is_logged_today(),
+            'id': h.id, 'name': h.name, 'metric_type': h.metric_type,
+            'streak': h.streak(), 'rate_30': h.completion_rate(30),
+            'days': days, 'logged_today': h.is_logged_today(),
         })
     return JsonResponse({'habits': data})
 
 
-# ── /api/goals/ ───────────────────────────────────────────────────────────────
- 
 def goals_api(request):
-    """
-    Returns active goals with completion percentage and stall status.
-    Used by the goal progress bars panel.
-    """
-    goals = Goal.objects.filter(is_active=True, is_complete=False).order_by(
-        '-priority',
-        'due_date'
-    ).prefetch_related('items')
-
     data = []
-    for goal in goals:
+    for g in Goal.objects.filter(is_active=True, is_complete=False).order_by('-priority', 'due_date').prefetch_related('items'):
         data.append({
-            'id': goal.id,
-            'name': goal.name,
-            'category': goal.category,
-            'priority': goal.priority,
-            'pct': goal.completion_pct(),
-            'due_date': goal.due_date.isoformat() if goal.due_date else None,
-            'is_overdue': goal.is_overdue,
-            'days_since_progress': goal.days_since_progress,
-            'items_total': goal.items.filter(is_active=True).count(),
-            'items_done': goal.items.filter(is_active=True, is_complete=True).count(),
+            'id': g.id, 'name': g.name, 'category': g.category, 'priority': g.priority,
+            'pct': g.completion_pct(),
+            'due_date': g.due_date.isoformat() if g.due_date else None,
+            'is_overdue': g.is_overdue, 'days_since_progress': g.days_since_progress,
+            'items_total': g.items.filter(is_active=True).count(),
+            'items_done':  g.items.filter(is_active=True, is_complete=True).count(),
         })
-    
     return JsonResponse({'goals': data})
 
 
-# ── /api/reminders/upcoming/ ─────────────────────────────────────────────────
- 
 def reminders_upcoming_api(request):
-    """
-    Returns the next N active reminders ordered by next_run.
-    Flags urgent reminders (due within 15 minutes).
-    """
     limit = int(request.GET.get('limit', 8))
-    reminders = Reminder.objects.filter(is_active=True).order_by('next_run')[:limit]
-
-    data = []
-    for r in reminders:
-        # Resolve source label
-        source = r.source
-        source_label = None
-        if source:
-            source_label = getattr(source, 'name', None) or getattr(source, 'title', None)
-
+    data  = []
+    for r in Reminder.objects.filter(is_active=True).order_by('next_run')[:limit]:
+        src = r.source
         data.append({
-            'id': r.id,
-            'title': r.title,
-            'frequency': r.frequency,
-            'channel': r.channel,
+            'id': r.id, 'title': r.title, 'frequency': r.frequency, 'channel': r.channel,
             'next_run': r.next_run.isoformat() if r.next_run else None,
-            'is_urgent': r.is_urgent,
-            'is_due': r.is_due,
-            'source_label': source_label,
+            'is_urgent': r.is_urgent, 'is_due': r.is_due,
+            'source_label': getattr(src, 'name', None) or getattr(src, 'title', None) if src else None,
         })
-    
     return JsonResponse({'reminders': data})
 
 
-# ── /api/tasks/upcoming/ ─────────────────────────────────────────────────────
- 
 def tasks_upcoming_api(request):
-    """
-    Returns upcoming incomplete tasks ordered by due date.
-    Includes overdue tasks first.
-    """
-    limit = int(request.GET.get('limit', 8))
-    tasks = Task.objects.filter(
-        is_active=True,
-        is_complete=False,
-    ).order_by('due_date', '-priority')[:limit]
-
-    today = timezone.now().date()
-    data = []
-    for t in tasks:
+    limit = int(request.GET.get('limit', 10))
+    data  = []
+    for t in Task.objects.filter(is_active=True, is_complete=False).order_by('due_date', '-priority')[:limit]:
         data.append({
-            'id': t.id,
-            'name': t.name,
-            'priority': t.priority,
-            'category': t.category,
-            'energy_type': t.energy_type,
-            'where_task': t.where_task,
+            'id': t.id, 'name': t.name, 'priority': t.priority, 'category': t.category,
+            'energy_type': t.energy_type, 'where_task': t.where_task,
             'due_date': t.due_date.isoformat() if t.due_date else None,
-            'is_overdue': t.is_overdue,
-            'status': t.status,
+            'is_overdue': t.is_overdue, 'status': t.status,
         })
-    
     return JsonResponse({'tasks': data})
 
 
-# ── /api/calendar/events/ ────────────────────────────────────────────────────
- 
 def calendar_events_api(request):
-    """
-    Returns Reminders as FullCalendar-compatible JSON events.
-    Accepts ?start=...&end=... from FullCalendar's date range fetch.
-    """
     start = request.GET.get('start')
-    end = request.GET.get('end')
-
-    qs = Reminder.objects.filter(is_active=True)
+    end   = request.GET.get('end')
+    qs    = Reminder.objects.filter(is_active=True)
     if start:
         qs = qs.filter(next_run__gte=start)
     if end:
         qs = qs.filter(next_run__lte=end)
-    
     COLOR_MAP = {
-        Reminder.FREQ_DAILY:   '#3ecf8e',
-        Reminder.FREQ_WEEKLY:  '#9b8cf5',
-        Reminder.FREQ_MONTHLY: '#f0a429',
-        Reminder.FREQ_ONCE:    '#3fd4f4',
+        Reminder.FREQ_DAILY:   '#1bc5bd',
+        Reminder.FREQ_WEEKLY:  '#6f42c1',
+        Reminder.FREQ_MONTHLY: '#ffa800',
+        Reminder.FREQ_ONCE:    '#00cfde',
         Reminder.FREQ_CUSTOM:  '#b8ff47',
     }
-
-    events = [
-        {
-            'id': r.id,
-            'title': r.title,
-            'start': r.next_run.isoformat(),
-            'color': COLOR_MAP.get(r.frequency, '#888888'),
-            'extendedProps': {
-                'frequency': r.frequency,
-                'description': r.description,
-                'channel': r.channel,
-            },
-        }
-        for r in qs
-    ]
-
-    return JsonResponse(events, safe=False)
-
+    return JsonResponse([{
+        'id': r.id, 'title': r.title, 'start': r.next_run.isoformat(),
+        'color': COLOR_MAP.get(r.frequency, '#888'),
+        'extendedProps': {'frequency': r.frequency, 'description': r.description},
+    } for r in qs], safe=False)

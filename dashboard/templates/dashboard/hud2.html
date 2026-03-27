@@ -1,0 +1,1297 @@
+{% load static %}
+{% load dashboard_filters %}
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>aura · dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+:root {
+  --app-bg:           #1a1f2e;
+  --sidebar-bg:       #141828;
+  --sidebar-w:        240px;
+  --header-bg:        #1d2234;
+  --header-h:         60px;
+  --card-bg:          #1d2234;
+  --card-bg-2:        #222741;
+  --border-color:     rgba(255,255,255,0.08);
+  --border-hover:     rgba(255,255,255,0.16);
+  --theme:            #00cfde;
+  --theme-rgb:        0, 207, 222;
+  --theme-dim:        rgba(0,207,222,0.12);
+  --green:            #1bc5bd;
+  --green-dim:        rgba(27,197,189,0.12);
+  --orange:           #ffa800;
+  --orange-dim:       rgba(255,168,0,0.12);
+  --red:              #f64e60;
+  --red-dim:          rgba(246,78,96,0.12);
+  --purple:           #8950fc;
+  --purple-dim:       rgba(137,80,252,0.12);
+  --text:             #e0e6f0;
+  --text-muted:       #6c7a96;
+  --text-dim:         #4a5470;
+  --font-display:     'Rajdhani', sans-serif;
+  --font-mono:        'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--app-bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  overflow: hidden;
+}
+
+/* ── APP SHELL ─────────────────────────────────────────────────────── */
+#app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── SIDEBAR ───────────────────────────────────────────────────────── */
+#sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 0.25s ease, min-width 0.25s ease;
+  position: relative;
+  z-index: 100;
+}
+#sidebar.collapsed {
+  width: 60px;
+  min-width: 60px;
+}
+#sidebar.collapsed .nav-label,
+#sidebar.collapsed .nav-group-label,
+#sidebar.collapsed .sidebar-brand-text { display: none; }
+#sidebar.collapsed .sidebar-brand { justify-content: center; }
+#sidebar.collapsed .nav-link { justify-content: center; padding: 10px 0; }
+
+.sidebar-brand {
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 10px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.brand-icon {
+  width: 36px; height: 36px;
+  background: var(--theme);
+  color: #0a0d14;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+.sidebar-brand-text {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.sidebar-brand-text span { color: var(--theme); }
+
+.sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 0;
+}
+.sidebar-scroll::-webkit-scrollbar { width: 3px; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+
+.nav-group-label {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 14px 18px 6px;
+  font-family: var(--font-display);
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 18px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 11px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: color 0.15s, background 0.15s;
+  position: relative;
+  white-space: nowrap;
+  border-left: 2px solid transparent;
+}
+.nav-link:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+.nav-link.active {
+  color: var(--theme);
+  background: var(--theme-dim);
+  border-left-color: var(--theme);
+}
+.nav-link i { width: 16px; text-align: center; font-size: 13px; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto;
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+/* ── MAIN CONTENT ──────────────────────────────────────────────────── */
+#content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* ── HEADER ────────────────────────────────────────────────────────── */
+#header {
+  height: var(--header-h);
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  flex-shrink: 0;
+}
+#sidebar-toggle {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  width: 32px; height: 32px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+#sidebar-toggle:hover { border-color: var(--theme); color: var(--theme); }
+
+.breadcrumb-hud {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.breadcrumb-hud .sep { opacity: 0.4; }
+.breadcrumb-hud .current { color: var(--text); font-weight: 600; }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.header-clock {
+  text-align: right;
+  border-right: 1px solid var(--border-color);
+  padding-right: 12px;
+}
+.clock-time {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: var(--text);
+}
+.clock-date {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+.header-weather {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 12px;
+  border-right: 1px solid var(--border-color);
+}
+.weather-temp {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1;
+}
+.weather-desc { font-size: 9px; color: var(--text-muted); letter-spacing: 0.05em; }
+
+.header-icon-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  width: 32px; height: 32px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  text-decoration: none;
+  position: relative;
+  transition: border-color 0.15s, color 0.15s;
+}
+.header-icon-btn:hover { border-color: var(--theme); color: var(--theme); }
+.notif-dot {
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+/* ── CONTENT BODY ──────────────────────────────────────────────────── */
+#content-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+#content-body::-webkit-scrollbar { width: 4px; }
+#content-body::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+
+/* ── HUD CARD ──────────────────────────────────────────────────────── */
+.hud-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+.hud-card::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: -1px;
+  width: 14px; height: 14px;
+  border-top: 2px solid var(--theme);
+  border-left: 2px solid var(--theme);
+  z-index: 2;
+}
+.hud-card::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; right: -1px;
+  width: 14px; height: 14px;
+  border-bottom: 2px solid var(--theme);
+  border-right: 2px solid var(--theme);
+  z-index: 2;
+}
+.hud-card.accent-green::before,
+.hud-card.accent-green::after { border-color: var(--green); }
+.hud-card.accent-orange::before,
+.hud-card.accent-orange::after { border-color: var(--orange); }
+.hud-card.accent-red::before,
+.hud-card.accent-red::after { border-color: var(--red); }
+.hud-card.accent-purple::before,
+.hud-card.accent-purple::after { border-color: var(--purple); }
+
+.card-header-hud {
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-title-hud {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.card-title-hud::before {
+  content: '';
+  display: inline-block;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--theme);
+  box-shadow: 0 0 6px var(--theme);
+  animation: blink 2.5s ease-in-out infinite;
+}
+.hud-card.accent-green .card-title-hud::before { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.hud-card.accent-orange .card-title-hud::before { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+.hud-card.accent-red .card-title-hud::before { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.hud-card.accent-purple .card-title-hud::before { background: var(--purple); box-shadow: 0 0 6px var(--purple); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+/* ── STAT CARDS ────────────────────────────────────────────────────── */
+.stat-card-body {
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.stat-info { flex: 1; min-width: 0; }
+.stat-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.stat-value.c-theme  { color: var(--theme); }
+.stat-value.c-green  { color: var(--green); }
+.stat-value.c-orange { color: var(--orange); }
+.stat-value.c-red    { color: var(--red); }
+.stat-value.c-purple { color: var(--purple); }
+
+.stat-trend {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.05em;
+}
+.stat-trend .up   { color: var(--green); }
+.stat-trend .down { color: var(--red); }
+.stat-trend .warn { color: var(--orange); }
+
+.stat-chart { width: 100px; flex-shrink: 0; }
+
+/* ── HABITS GRID ────────────────────────────────────────────────────── */
+.habits-body { padding: 10px 14px; }
+.habit-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.habit-row:last-child { border-bottom: none; }
+.habit-name-col {
+  width: 130px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.habit-dow {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  justify-content: center;
+}
+.habit-dow-label {
+  display: flex;
+  gap: 4px;
+  padding: 4px 0 6px;
+}
+.dow-hdr {
+  width: 26px;
+  text-align: center;
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.hdot {
+  width: 26px; height: 26px;
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+  background: var(--card-bg-2);
+  border: 1px solid var(--border-color);
+  transition: background 0.2s;
+}
+.hdot.yn-yes   { background: var(--theme-dim); border-color: rgba(0,207,222,0.3); color: var(--theme); }
+.hdot.yn-no    { background: rgba(246,78,96,0.08); border-color: rgba(246,78,96,0.2); color: rgba(246,78,96,0.5); }
+.hdot.scale-on { background: var(--green-dim); border-color: rgba(27,197,189,0.3); color: var(--green); }
+.hdot.empty    { color: var(--text-dim); }
+.habit-streak-col {
+  width: 60px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.streak-val {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--theme);
+}
+.streak-sub { font-size: 8px; color: var(--text-dim); letter-spacing: 0.08em; }
+.habit-rate-col {
+  width: 44px;
+  text-align: right;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.no-habits-msg {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-dim);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── ROUTINE RADIALS ───────────────────────────────────────────────── */
+.routines-body { padding: 12px 14px; }
+.routine-radial-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.routine-radial-item:last-child { border-bottom: none; }
+.routine-chart-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.routine-radial-chart { flex-shrink: 0; }
+.routine-info { flex: 1; min-width: 0; }
+.routine-name-hud {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.routine-slot-badge {
+  display: inline-block;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: var(--theme-dim);
+  color: var(--theme);
+  margin-bottom: 4px;
+}
+.routine-slot-badge.afternoon { background: var(--orange-dim); color: var(--orange); }
+.routine-slot-badge.evening   { background: var(--purple-dim); color: var(--purple); }
+.routine-items-done {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.routine-streak-hud {
+  font-size: 10px;
+  color: var(--theme);
+  margin-top: 2px;
+}
+.no-routines-msg {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-dim);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── TASKS TABLE ───────────────────────────────────────────────────── */
+.tasks-table-wrap { padding: 0 4px 4px; overflow-x: auto; }
+table.hud-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+table.hud-table th {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+  white-space: nowrap;
+}
+table.hud-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-muted);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+table.hud-table tr:last-child td { border-bottom: none; }
+table.hud-table tr:hover td { background: rgba(255,255,255,0.02); color: var(--text); }
+.task-name-cell {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text) !important;
+}
+.hud-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+.badge-high    { background: var(--orange-dim);  color: var(--orange); }
+.badge-medium  { background: var(--theme-dim);   color: var(--theme); }
+.badge-low     { background: rgba(108,122,150,0.12); color: var(--text-muted); }
+.badge-overdue { background: var(--red-dim);     color: var(--red); }
+.badge-todo    { background: rgba(108,122,150,0.12); color: var(--text-muted); }
+.badge-inprog  { background: var(--theme-dim);   color: var(--theme); }
+.badge-stalled { background: var(--orange-dim);  color: var(--orange); }
+.badge-done    { background: var(--green-dim);   color: var(--green); }
+
+/* ── GOALS ─────────────────────────────────────────────────────────── */
+.goals-body { padding: 10px 14px; display: flex; flex-direction: column; gap: 12px; }
+.goal-item-hud {}
+.goal-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+.goal-name-hud {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.goal-pct-hud {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--theme);
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+.goal-pct-hud.c-green  { color: var(--green); }
+.goal-pct-hud.c-orange { color: var(--orange); }
+.goal-pct-hud.c-red    { color: var(--red); }
+.goal-progress-bar {
+  height: 4px;
+  background: var(--card-bg-2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.goal-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+  background: var(--theme);
+}
+.goal-progress-fill.c-green  { background: var(--green); }
+.goal-progress-fill.c-orange { background: var(--orange); }
+.goal-progress-fill.c-red    { background: var(--red); }
+.goal-meta-hud {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+  display: flex;
+  gap: 8px;
+}
+.no-goals-msg {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-dim);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── REMINDERS ─────────────────────────────────────────────────────── */
+.reminders-body { padding: 8px 14px; display: flex; flex-direction: column; gap: 6px; }
+.reminder-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--card-bg-2);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  border-left: 3px solid var(--theme);
+  transition: border-color 0.15s;
+}
+.reminder-row:hover { border-color: var(--theme); }
+.reminder-row.freq-daily    { border-left-color: var(--theme); }
+.reminder-row.freq-weekly   { border-left-color: var(--purple); }
+.reminder-row.freq-monthly  { border-left-color: var(--orange); }
+.reminder-row.freq-once     { border-left-color: var(--green); }
+.reminder-row.urgent {
+  border-left-color: var(--red);
+  animation: remPulse 2s ease-in-out infinite;
+}
+@keyframes remPulse { 0%,100%{background:var(--card-bg-2)} 50%{background:rgba(246,78,96,0.05)} }
+.rem-time-col {
+  min-width: 150px;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+.rem-title-col { flex: 1; font-size: 11px; color: var(--text); }
+.rem-freq-badge {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.rem-freq-badge.daily   { background: var(--theme-dim);  color: var(--theme); }
+.rem-freq-badge.weekly  { background: var(--purple-dim); color: var(--purple); }
+.rem-freq-badge.monthly { background: var(--orange-dim); color: var(--orange); }
+.rem-freq-badge.once    { background: var(--green-dim);  color: var(--green); }
+.rem-freq-badge.urgent  { background: var(--red-dim);    color: var(--red); }
+.no-reminders-msg {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-dim);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── STATUS BAR ────────────────────────────────────────────────────── */
+#status-bar {
+  height: 22px;
+  background: var(--sidebar-bg);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.sb-group { display: flex; align-items: center; gap: 12px; }
+.sb-pip { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+.sb-pip.live  { background: var(--green); }
+.sb-pip.warn  { background: var(--orange); }
+.sb-pip.stale { background: var(--text-dim); }
+
+/* ── SCANLINES ─────────────────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+</style>
+</head>
+
+<body>
+{{ tasks_sparkline_json|json_script:"tasks-sparkline-data" }}
+{{ routines_json|json_script:"routines-data" }}
+{{ habits_json|json_script:"habits-data" }}
+{{ goals_json|json_script:"goals-data" }}
+{{ reminders_json|json_script:"reminders-data" }}
+{{ upcoming_tasks_json|json_script:"tasks-data" }}
+
+<div id="app">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <nav id="sidebar">
+    <a href="{% url 'dashboard:hud' %}" class="sidebar-brand">
+      <div class="brand-icon">A</div>
+      <div class="sidebar-brand-text">aura<span>.</span></div>
+    </a>
+    <div class="sidebar-scroll">
+      <div class="nav-group-label">Navigation</div>
+      <a href="{% url 'dashboard:hud' %}" class="nav-link active">
+        <i class="fa-solid fa-table-cells-large"></i>
+        <span class="nav-label">Dashboard</span>
+      </a>
+      <a href="/admin/tasks/task/" class="nav-link">
+        <i class="fa-solid fa-list-check"></i>
+        <span class="nav-label">Tasks</span>
+        {% if tasks_overdue > 0 %}
+        <span class="nav-badge">{{ tasks_overdue }}</span>
+        {% endif %}
+      </a>
+      <a href="/admin/routines/routine/" class="nav-link">
+        <i class="fa-solid fa-rotate"></i>
+        <span class="nav-label">Routines</span>
+      </a>
+      <a href="/admin/goals/goal/" class="nav-link">
+        <i class="fa-solid fa-bullseye"></i>
+        <span class="nav-label">Goals</span>
+      </a>
+      <a href="/admin/habits/habit/" class="nav-link">
+        <i class="fa-solid fa-fire-flame-curved"></i>
+        <span class="nav-label">Habits</span>
+      </a>
+      <a href="/admin/reminders/reminder/" class="nav-link">
+        <i class="fa-solid fa-bell"></i>
+        <span class="nav-label">Reminders</span>
+        {% if reminders_due_now > 0 %}
+        <span class="nav-badge">{{ reminders_due_now }}</span>
+        {% endif %}
+      </a>
+      <div class="nav-group-label">System</div>
+      <a href="/admin/" class="nav-link">
+        <i class="fa-solid fa-sliders"></i>
+        <span class="nav-label">Admin</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <div id="content">
+
+    <!-- HEADER -->
+    <div id="header">
+      <button id="sidebar-toggle" onclick="toggleSidebar()">
+        <i class="fa-solid fa-bars" style="font-size:12px"></i>
+      </button>
+      <div class="breadcrumb-hud">
+        <span>aura</span>
+        <span class="sep">/</span>
+        <span class="current">dashboard</span>
+      </div>
+      <div class="header-actions">
+        <div class="header-weather">
+          <span id="weather-icon" style="font-size:18px">—</span>
+          <div>
+            <div class="weather-temp" id="weather-temp">—°</div>
+            <div class="weather-desc" id="weather-desc">loading</div>
+          </div>
+        </div>
+        <div class="header-clock">
+          <div class="clock-time" id="clock-time">--:--</div>
+          <div class="clock-date" id="clock-date">---</div>
+        </div>
+        {% if reminders_due_now > 0 %}
+        <a href="/admin/reminders/reminder/" class="header-icon-btn" title="{{ reminders_due_now }} reminder(s) due">
+          <i class="fa-solid fa-bell" style="font-size:13px"></i>
+          <span class="notif-dot"></span>
+        </a>
+        {% endif %}
+        <a href="/admin/" class="header-icon-btn" title="Admin">
+          <i class="fa-solid fa-gear" style="font-size:13px"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- CONTENT BODY -->
+    <div id="content-body">
+
+      <!-- ROW 1: STAT CARDS -->
+      <div class="row g-3">
+
+        <div class="col-lg-3 col-md-6">
+          <div class="hud-card">
+            <div class="stat-card-body">
+              <div class="stat-info">
+                <div class="stat-label">Tasks Due Today</div>
+                <div class="stat-value c-theme">{{ tasks_due_today }}</div>
+                <div class="stat-trend">
+                  {% if tasks_overdue > 0 %}
+                  <span class="down"><i class="fa-solid fa-triangle-exclamation" style="font-size:9px"></i></span>
+                  <span class="down">{{ tasks_overdue }} overdue</span>
+                  {% else %}
+                  <span class="up"><i class="fa-solid fa-check" style="font-size:9px"></i></span>
+                  <span>none overdue</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="stat-chart" id="chart-tasks-due"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+          <div class="hud-card accent-green">
+            <div class="stat-card-body">
+              <div class="stat-info">
+                <div class="stat-label">Active Streaks</div>
+                <div class="stat-value c-green">{{ active_streaks }}</div>
+                <div class="stat-trend">
+                  <span class="up"><i class="fa-solid fa-fire" style="font-size:9px"></i></span>
+                  <span>best: {{ max_streak }}d</span>
+                </div>
+              </div>
+              <div class="stat-chart" id="chart-streaks"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+          <div class="hud-card accent-orange">
+            <div class="stat-card-body">
+              <div class="stat-info">
+                <div class="stat-label">Habits Today</div>
+                <div class="stat-value c-orange">{{ habits_logged_today }}<span style="font-size:18px;opacity:0.5">/{{ habits_total }}</span></div>
+                <div class="stat-trend">
+                  {% if habits_total > 0 %}
+                  {% widthratio habits_logged_today habits_total 100 as habit_pct %}
+                  <span class="{% if habit_pct >= 70 %}up{% else %}warn{% endif %}">{{ habit_pct }}% logged</span>
+                  {% else %}
+                  <span>no habits defined</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="stat-chart" id="chart-habits"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+          <div class="hud-card accent-purple">
+            <div class="stat-card-body">
+              <div class="stat-info">
+                <div class="stat-label">Completion Rate</div>
+                <div class="stat-value c-purple">{{ completion_rate }}<span style="font-size:18px;opacity:0.5">%</span></div>
+                <div class="stat-trend">
+                  <span style="color:var(--text-dim)">last 30 days</span>
+                </div>
+              </div>
+              <div class="stat-chart" id="chart-rate"></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /row 1 -->
+
+      <!-- ROW 2: HABITS + ROUTINES -->
+      <div class="row g-3">
+
+        <!-- Habit weekly grid -->
+        <div class="col-lg-8">
+          <div class="hud-card accent-green" style="height:100%">
+            <div class="card-header-hud">
+              <div class="card-title-hud">Habits · This Week</div>
+              <a href="/admin/habits/habit/" style="font-size:9px;color:var(--text-dim);letter-spacing:.1em;text-decoration:none;text-transform:uppercase;font-family:var(--font-display)">Manage</a>
+            </div>
+            <div class="habits-body">
+              {% if habits_json != "[]" %}
+              <!-- DOW header row -->
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:2px;">
+                <div style="width:130px;flex-shrink:0"></div>
+                <div class="habit-dow habit-dow-label" style="flex:1;justify-content:center">
+                  <div class="dow-hdr">Mo</div>
+                  <div class="dow-hdr">Tu</div>
+                  <div class="dow-hdr">We</div>
+                  <div class="dow-hdr">Th</div>
+                  <div class="dow-hdr">Fr</div>
+                  <div class="dow-hdr">Sa</div>
+                  <div class="dow-hdr">Su</div>
+                </div>
+                <div style="width:60px;text-align:right;flex-shrink:0;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);font-family:var(--font-display)">Streak</div>
+                <div style="width:44px;text-align:right;flex-shrink:0;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);font-family:var(--font-display)">30d</div>
+              </div>
+              <div id="habits-grid"><!-- rendered by JS below --></div>
+              {% else %}
+              <div class="no-habits-msg">No habits defined · <a href="/admin/habits/habit/add/" style="color:var(--theme);text-decoration:none">add one</a></div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Routine progress -->
+        <div class="col-lg-4">
+          <div class="hud-card" style="height:100%">
+            <div class="card-header-hud">
+              <div class="card-title-hud">Routines · Today</div>
+              <a href="/admin/routines/routine/" style="font-size:9px;color:var(--text-dim);letter-spacing:.1em;text-decoration:none;text-transform:uppercase;font-family:var(--font-display)">Manage</a>
+            </div>
+            <div class="routines-body" id="routines-body">
+              {% if routines_today %}
+              {% for r in routines_today %}
+              <div class="routine-radial-item">
+                <div class="routine-chart-row">
+                  <div class="routine-radial-chart" id="radial-{{ r.id }}"></div>
+                  <div class="routine-info">
+                    <div class="routine-name-hud">{{ r.name }}</div>
+                    <div class="routine-slot-badge {{ r.slot }}">{{ r.slot_display }}</div>
+                    <div class="routine-items-done">{{ r.done }}/{{ r.total }} items done</div>
+                    <div class="routine-streak-hud">
+                      {% if r.streak > 0 %}↑ {{ r.streak }}d streak{% else %}no streak yet{% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+              {% else %}
+              <div class="no-routines-msg">No routines today</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /row 2 -->
+
+      <!-- ROW 3: TASKS + GOALS -->
+      <div class="row g-3">
+
+        <!-- Tasks table -->
+        <div class="col-lg-7">
+          <div class="hud-card accent-orange">
+            <div class="card-header-hud">
+              <div class="card-title-hud">Upcoming Tasks</div>
+              <a href="/admin/tasks/task/add/" style="font-size:9px;color:var(--text-dim);letter-spacing:.1em;text-decoration:none;text-transform:uppercase;font-family:var(--font-display)">+ Add</a>
+            </div>
+            <div class="tasks-table-wrap">
+              {% if upcoming_tasks %}
+              <table class="hud-table">
+                <thead>
+                  <tr>
+                    <th>Task</th>
+                    <th>Category</th>
+                    <th>Due</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for t in upcoming_tasks %}
+                  <tr>
+                    <td class="task-name-cell">{{ t.name }}</td>
+                    <td>{{ t.category }}</td>
+                    <td>
+                      {% if t.is_overdue %}
+                      <span style="color:var(--red)">{{ t.due_date }}</span>
+                      {% else %}
+                      {{ t.due_date }}
+                      {% endif %}
+                    </td>
+                    <td>
+                      <span class="hud-badge badge-{{ t.priority }}">{{ t.priority }}</span>
+                    </td>
+                    <td>
+                      {% if t.is_overdue %}
+                      <span class="hud-badge badge-overdue">overdue</span>
+                      {% elif t.status == 'in_progress' %}
+                      <span class="hud-badge badge-inprog">in progress</span>
+                      {% elif t.status == 'stalled' %}
+                      <span class="hud-badge badge-stalled">stalled</span>
+                      {% else %}
+                      <span class="hud-badge badge-todo">{{ t.status_display }}</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+              {% else %}
+              <div style="padding:24px;text-align:center;color:var(--text-dim);font-family:var(--font-display);font-size:11px;letter-spacing:.12em;text-transform:uppercase">
+                No pending tasks · <a href="/admin/tasks/task/add/" style="color:var(--theme);text-decoration:none">add one</a>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Goals -->
+        <div class="col-lg-5">
+          <div class="hud-card accent-purple">
+            <div class="card-header-hud">
+              <div class="card-title-hud">Active Goals</div>
+              <a href="/admin/goals/goal/add/" style="font-size:9px;color:var(--text-dim);letter-spacing:.1em;text-decoration:none;text-transform:uppercase;font-family:var(--font-display)">+ Add</a>
+            </div>
+            <div class="goals-body">
+              {% if goals %}
+              {% for g in goals %}
+              {% with pc=g|goal_color %}
+              <div class="goal-item-hud">
+                <div class="goal-header-row">
+                  <div class="goal-name-hud">{{ g.name }}</div>
+                  <div class="goal-pct-hud {{ pc }}">{{ g.pct }}%</div>
+                </div>
+                <div class="goal-progress-bar">
+                  <div class="goal-progress-fill {{ pc }}" style="width:{{ g.pct }}%"></div>
+                </div>
+                <div class="goal-meta-hud">
+                  <span>{{ g.items_done }}/{{ g.items_total }} items</span>
+                  {% if g.due_date %}<span>· due {{ g.due_date }}</span>{% endif %}
+                  {% if g.days_since_progress and g.days_since_progress > 7 %}
+                  <span style="color:var(--orange)">· stalled {{ g.days_since_progress }}d</span>
+                  {% endif %}
+                </div>
+              </div>
+              {% endwith %}
+              {% endfor %}
+              {% else %}
+              <div class="no-goals-msg">No active goals · <a href="/admin/goals/goal/add/" style="color:var(--theme);text-decoration:none">add one</a></div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /row 3 -->
+
+      <!-- ROW 4: REMINDERS -->
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="hud-card">
+            <div class="card-header-hud">
+              <div class="card-title-hud">Reminders · Upcoming</div>
+              <a href="/admin/reminders/reminder/add/" style="font-size:9px;color:var(--text-dim);letter-spacing:.1em;text-decoration:none;text-transform:uppercase;font-family:var(--font-display)">+ Add</a>
+            </div>
+            <div class="reminders-body">
+              {% if reminders %}
+              {% for r in reminders %}
+              <div class="reminder-row freq-{{ r.frequency }}{% if r.is_urgent or r.is_due %} urgent{% endif %}">
+                <div class="rem-time-col">{{ r.next_run }}</div>
+                <div class="rem-title-col">{{ r.title }}</div>
+                {% if r.is_urgent or r.is_due %}
+                <span class="rem-freq-badge urgent">Urgent</span>
+                {% elif r.frequency != 'once' %}
+                <span class="rem-freq-badge {{ r.frequency }}">{{ r.frequency }}</span>
+                {% else %}
+                <span class="rem-freq-badge once">One-time</span>
+                {% endif %}
+              </div>
+              {% endfor %}
+              {% else %}
+              <div class="no-reminders-msg">No upcoming reminders · <a href="/admin/reminders/reminder/add/" style="color:var(--theme);text-decoration:none">add one</a></div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div><!-- /row 4 -->
+
+    </div><!-- /content-body -->
+
+    <!-- STATUS BAR -->
+    <div id="status-bar">
+      <div class="sb-group">
+        <span>aura v1.0</span>
+        <span style="opacity:.3">|</span>
+        <span><span class="sb-pip live" id="sync-pip"></span> <span id="sync-text">synced</span></span>
+        <span style="opacity:.3">|</span>
+        <span>America/New_York</span>
+      </div>
+      <div class="sb-group">
+        <span>tasks · routines · goals · habits · reminders</span>
+        <span style="opacity:.3">|</span>
+        <span>refresh 60s</span>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.0/dist/apexcharts.min.js"></script>
+<script>
+'use strict';
+
+/* ── DATA FROM DJANGO ────────────────────────────────────────────── */
+const SPARKLINE   = JSON.parse(document.getElementById('tasks-sparkline-data').textContent);
+const ROUTINES    = JSON.parse(document.getElementById('routines-data').textContent);
+const HABITS      = JSON.parse(document.getElementById('habits-data').textContent);
+const GOALS       = JSON.parse(document.getElementById('goals-data').textContent);
+const REMINDERS   = JSON.parse(document.getElementById('reminders-data').textContent);
+const TASKS       = JSON.parse(document.getElementById('tasks-data').textContent);
+
+/* ── URLS ────────────────────────────────────────────────────────── */
+const URLS = {
+  stats:     "{% url 'dashboard:api-stats' %}",
+  routines:  "{% url 'dashboard:api-routines-today' %}",
+  habits:    "{% url 'dashboard:api-habits-week' %}",
+  goals:     "{% url 'dashboard:api-goals' %}",
+  reminders: "{% url 'dashboard:api-reminders-upcoming' %}",
+  tasks:     "{% url 'dashboard:api-tasks-upcoming' %}",
+};
+
+/* ── CLOCK ───────────────────────────────────────────────────────── */
+const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function tick() {
+  const n = new Date();
+  const h = n.getHours(), m = String(n.getMinutes()).padStart(2,'0');
+  document.getElementById('clock-time').textContent = `${h%12||12}:${m} ${h>=12?'PM':'AM'}`;
+  document.getElementById('clock-date').textContent = `${DAYS[n.getDay()].toUpperCase().slice(0,3)} ${MONTHS[n.getMonth()].toUpperCase()} ${n.getDate()}`;
+}
+tick(); setInterval(tick, 1000);
+
+/* ── WEATHER ─────────────────────────────────────────────────────── */
+fetch('https://wttr.in/?format=%t+%C')
+  .then(r => r.text()).then(t => {
+    const p = t.trim().split(' ');
+    document.getElementById('weather-temp').textContent = p[0] || '—';
+    document.getElementById('weather-desc').textContent = (p.slice(1).join(' ') || '—').toLowerCase().slice(0,18);
+    document.getElementById('weather-icon').textContent = '⛅';
+  }).catch(() => {});
+
+/* ── SIDEBAR TOGGLE ──────────────────────────────────────────────── */
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('collapsed');
+}
+
+/* ── APEX SPARKLINE HELPER ────────────────────────────────────────── */
+function sparkline(el, data, color) {
+  if (!el) return;
+  new ApexCharts(el, {
+    chart: { type: 'area', height: 52, sparkline: { enabled: true }, animations: { enabled: false } },
+    series: [{ data }],
+    stroke: { width: 2, curve: 'smooth' },
+    fill: { type: 'solid', opacity: 0.15 },
+    colors: [color],
+    tooltip: { enabled: false },
+  }).render();
+}
+
+/* ── APEX RADIAL HELPER ───────────────────────────────────────────── */
+function radialChart(elId, pct, color) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  new ApexCharts(el, {
+    chart: { type: 'radialBar', height: 72, width: 72, sparkline: { enabled: true }, animations: { enabled: false } },
+    series: [pct],
+    colors: [color],
+    plotOptions: {
+      radialBar: {
+        hollow: { size: '55%' },
+        dataLabels: {
+          name: { show: false },
+          value: {
+            show: true, offsetY: 5,
+            fontSize: '13px', fontFamily: "'Rajdhani', sans-serif",
+            fontWeight: 700, color: color,
+            formatter: v => Math.round(v) + '%',
+          },
+        },
+        track: { background: '#222741', strokeWidth: '100%' },
+      },
+    },
+    stroke: { lineCap: 'round' },
+  }).render();
+}
+
+/* ── RENDER STAT SPARKLINES ───────────────────────────────────────── */
+sparkline(document.getElementById('chart-tasks-due'), SPARKLINE, '#00cfde');
+sparkline(document.getElementById('chart-streaks'),   SPARKLINE.map((v,i) => i), '#1bc5bd');
+sparkline(document.getElementById('chart-habits'),    [70,80,65,90,75,85,{{ habits_logged_today }}], '#ffa800');
+sparkline(document.getElementById('chart-rate'),      SPARKLINE, '#8950fc');
+
+/* ── RENDER ROUTINE RADIALS ───────────────────────────────────────── */
+const RADIAL_COLORS = ['#00cfde','#1bc5bd','#ffa800','#8950fc','#f64e60'];
+ROUTINES.forEach((r, i) => {
+  radialChart('radial-' + r.id, r.pct, RADIAL_COLORS[i % RADIAL_COLORS.length]);
+});
+
+/* ── RENDER HABIT GRID ────────────────────────────────────────────── */
+function renderHabits(habits) {
+  const grid = document.getElementById('habits-grid');
+  if (!grid) return;
+  if (!habits.length) {
+    grid.innerHTML = '<div class="no-habits-msg">No habits defined</div>';
+    return;
+  }
+  grid.innerHTML = habits.map(h => {
+    const dots = h.days.map(day => {
+      if (day === null) return `<div class="hdot empty">·</div>`;
+      if (h.metric_type === 'yn') {
+        return day.done
+          ? `<div class="hdot yn-yes" title="${day.value}">✓</div>`
+          : `<div class="hdot yn-no"  title="no">✗</div>`;
+      }
+      return day.done
+        ? `<div class="hdot scale-on" title="${day.value}">${day.value}</div>`
+        : `<div class="hdot empty">·</div>`;
+    }).join('');
+
+    return `
+      <div class="habit-row">
+        <div class="habit-name-col">${h.name}</div>
+        <div class="habit-dow">${dots}</div>
+        <div class="habit-streak-col">
+          <div class="streak-val">${h.streak}</div>
+          <div class="streak-sub">days</div>
+        </div>
+        <div class="habit-rate-col">${h.rate_30}%</div>
+      </div>`;
+  }).join('');
+}
+renderHabits(HABITS);
+
+/* ── SYNC INDICATOR ───────────────────────────────────────────────── */
+let lastSync = Date.now();
+setInterval(async () => {
+  try {
+    await fetch(URLS.stats);
+    lastSync = Date.now();
+  } catch(e) {}
+}, 60000);
+setInterval(() => {
+  const pip   = document.getElementById('sync-pip');
+  const stale = Date.now() - lastSync > 180000;
+  pip.className = 'sb-pip ' + (stale ? 'warn' : 'live');
+  document.getElementById('sync-text').textContent = stale ? 'stale' : 'synced';
+}, 15000);
+</script>
+</body>
+</html>

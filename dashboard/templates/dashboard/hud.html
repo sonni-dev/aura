@@ -393,7 +393,7 @@ function tick() {
 tick(); setInterval(tick, 1000);
 
 /* ── WEATHER via wttr.in ── */
-fetch('https://wttr.in/?format=%t+%C&lang=en')
+fetch('https://wttr.in/?u&format=%t+%C&lang=en')
   .then(r => r.text())
   .then(t => {
     const parts = t.trim().split(' ');
