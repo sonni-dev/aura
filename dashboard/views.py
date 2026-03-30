@@ -284,6 +284,42 @@ class HudView(TemplateView):
         
         upcoming_soon.sort(key=lambda x: x['due_date'])
 
+
+        # ─────────────────────────────────────────────────────────────────────────────
+        # ── Calendar dot data ─────────────────────────────────────────────────────────
+        # Passed to the template via |json_script so the mini-calendar JS can read it.
+        # Keys: ISO date strings. Values: sorted lists of source types.
+        # Sources: 'task', 'goal', 'reminder'  (GoalItems use 'goal' colour)
+        # ─────────────────────────────────────────────────────────────────────────────
+
+        cal_dots = defaultdict(set)
+
+        for due in Task.objects.filter(
+            is_active=True, is_complete=False, due_date__isnull=False
+        ).values_list('due_date', flat=True):
+            cal_dots[str(due)].add('task')
+        
+
+        for due in Goal.objects.filter(
+            is_active=True, is_complete=False, due_date__isnull=False
+        ).values_list('due_date', flat=True):
+            cal_dots[str(due)].add('goal')
+        
+
+        for due in GoalItem.objects.filter(
+            is_active=True, is_complete=False, due_date__isnull=False
+        ).values_list('due_date', flat=True):
+            cal_dots[str(due)].add('goal')      # same color as Goal
+        
+        for r in Reminder.objects.filter(
+            is_active=True, next_run__isnull=False):
+            cal_dots[str(r.next_run.date())].add('reminder')
+        
+
+        # Pass as Python dict - use |json_script in the template (not pre-serialized)
+        calendar_dots_data = {k: sorted(v) for k, v in cal_dots.items()}
+        
+
         # ── Assemble context ──────────────────────────────────────────────
         ctx.update({
             'today':                  today,
