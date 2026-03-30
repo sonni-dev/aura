@@ -355,6 +355,11 @@ class HudView(TemplateView):
             'due_reminders':          due_reminders,
             'upcoming_reminders':     upcoming_reminders,
             'due_reminders_count':    due_reminders.count(),
+
+            # Day view
+            'today_schedule': today_schedule,
+            'upcoming_soon': upcoming_soon,
+            'calendar_dots_data': calendar_dots_data,
         })
 
         return ctx
