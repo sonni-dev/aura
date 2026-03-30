@@ -233,6 +233,57 @@ class HudView(TemplateView):
         
         today_schedule.sort(key=lambda x: x['sort_key'])
 
+
+        # ─────────────────────────────────────────────────────────────────────────────
+        # ── Upcoming Soon (next 14 days, strictly after today) ───────────────────────
+        # Tasks, Goals, and GoalItems with due_date in the next 14 days.
+        # Reminders are already handled by the existing Upcoming Reminders card.
+        # ─────────────────────────────────────────────────────────────────────────────
+
+        soon_end = today + timedelta(days=14)
+        upcoming_soon = []
+
+        for t in Task.objects.filter(
+            is_active=True, is_complete=False,
+            due_date__gt=today, due_date__lte=soon_end
+        ).order_by('due_date', '-priority'):
+            upcoming_soon.append({
+                'title': t.name,
+                'source': 'task',
+                'source_label': 'TASK',
+                'due_date': t.due_date,
+                'days_until': (t.due_date - today).days,
+            })
+        
+        for g in Goal.objects.filter(
+            is_active=True, is_complete=False,
+            due_date__gt=today, due_date__lte=soon_end
+        ).order_by('due_date'):
+            upcoming_soon.append({
+                'title': g.name,
+                'source': 'goal',
+                'source_label': 'GOAL',
+                'due_date': g.due_date,
+                'days_until': (g.due_date - today).days,
+            })
+        
+        for gi in GoalItem.objects.filter(
+            is_active=True, is_complete=False, due_date__isnull=False,
+            due_date__gt=today, due_date__lte=soon_end
+        ).select_related('goal').order_by('due_date'):
+            _label = gi.goal.name.upper()
+            if len(_label) > 14:
+                _label = _label[:13] + '...'
+            upcoming_soon.append({
+                'title': gi.title,
+                'source': 'goal_item',
+                'source_label': _label,
+                'due_date': gi.due_date,
+                'days_until': (gi.due_date - today).days,
+            })
+        
+        upcoming_soon.sort(key=lambda x: x['due_date'])
+
         # ── Assemble context ──────────────────────────────────────────────
         ctx.update({
             'today':                  today,
