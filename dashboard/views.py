@@ -2,10 +2,12 @@ from django.views.generic import TemplateView
 from django.utils import timezone
 from django.http import JsonResponse
 from datetime import timedelta
+import json as _json
+from collections import defaultdict
 
 from tasks.models import Task
 from routines.models import Routine, RoutineCompletion, RoutineItem, WEEKDAY_MAP
-from goals.models import Goal
+from goals.models import Goal, GoalItem
 from habits.models import Habit, HabitLog
 from reminders.models import Reminder
 
@@ -141,6 +143,95 @@ class HudView(TemplateView):
         upcoming_reminders = Reminder.objects.filter(
             is_active=True, next_run__gt=now
         ).order_by('next_run')[:8]
+
+
+        # ─────────────────────────────────────────────────────────────────────────────
+        # ── Today Schedule ────────────────────────────────────────────────────────────
+        # Merges overdue tasks, today's routines, goals due today, tasks due today,
+        # and habits into a single time-ordered list for the "A Look at the Day" card.
+        # ─────────────────────────────────────────────────────────────────────────────
+        
+        SLOT_ORDER = {'morning': 0, 'afternoon': 1, 'evening': 2, 'anytime': 3}
+        today_schedule = []
+        
+        # 1) Overdue tasks bubble to the very top (capped at 5 to avoid overflow)
+        for t in list(tasks_overdue)[:5]:
+            today_schedule.append({
+                'title': t.name,
+                'subtitle': t.get_priority_display().upper() + ' PRIORITY',
+                'source': 'task',
+                'source_label': 'TASK',
+                'time_label': 'OVERDUE',
+                'done': False,
+                'show_pct': False,
+                'pct': 0,
+                'sort_key': -1,
+                'is_overdue': True,
+            })
+        
+        # 2) Routines scheduled for today, sorted morning → afternoon → evening → anytime
+        for rt_data in today_routines:
+            rt = rt_data['routine']
+            today_schedule.append({
+                'title': rt.name,
+                'subtitle': rt.get_slot_display().upper() + ' · ' + str(rt_data['total']) + ' ITEMS',
+                'source': 'routine',
+                'source_label': 'ROUTINE',
+                'time_label': rt.get_slot_display().upper(),
+                'done': rt_data['pct'] == 100,
+                'show_pct': True,
+                'pct': rt_data['pct'],
+                'sort_key': SLOT_ORDER.get(rt.slot, 3),
+                'is_overdue': False,
+            })
+
+        # 3) Goals whose due_date is today (pulled from the already-computed goals_data)
+        for g in goals_data:
+            if g['goal'].due_date == today:
+                today_schedule.append({
+                    'title': g['goal'].name,
+                    'subtitle': str(g['pct']) + '% COMPLETE',
+                    'source': 'goal',
+                    'source_label': 'GOAL',
+                    'time_label': 'DUE TODAY',
+                    'done': False,
+                    'show_pct': True,
+                    'pct': g['pct'],
+                    'sort_key': 4,
+                    'is_overdue': g['is_overdue'],
+                })
+        
+        # 4) Tasks due today
+        for t in tasks_due_today:
+            today_schedule.append({
+                'title': t.name,
+                'subtitle': t.get_priority_display().upper() + ' PRIORITY',
+                'source': 'task',
+                'source_label': 'TASK',
+                'time_label': 'DUE TODAY',
+                'done': t.is_complete,
+                'show_pct': False,
+                'pct': 0,
+                'sort_key': 5,
+                'is_overdue': False,
+            })
+        
+        # 5) Habits — all active habits; logged ones appear with a strikethrough
+        for h_data in habits_data:
+            today_schedule.append({
+                'title': h_data['habit'].name,
+                'subtitle': 'STREAK: ' + str(h_data['streak']) + (' DAY' if h_data['streak'] == 1 else ' DAYS'),
+                'source': 'habit',
+                'source_label': 'HABIT',
+                'time_label': 'LOGGED' if h_data['logged'] else 'LOG TODAY',
+                'done': h_data['logged'],
+                'show_pct': False,
+                'pct': 0,
+                'sort_key': 6,
+                'is_overdue': False,
+            })
+        
+        today_schedule.sort(key=lambda x: x['sort_key'])
 
         # ── Assemble context ──────────────────────────────────────────────
         ctx.update({
