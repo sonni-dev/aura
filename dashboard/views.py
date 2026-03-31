@@ -1,4 +1,6 @@
 from django.views.generic import TemplateView
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.http import JsonResponse
 from datetime import timedelta
@@ -85,6 +87,10 @@ class HudView(TemplateView):
                 'streak':  r.streak(today),
                 'items':   items_annotated,
             })
+        
+        # Sort by intended slot order, not alphabetical
+        SLOT_ORDER_MAP = {'morning': 0, 'afternoon': 1, 'evening': 2}
+        today_routines.sort(key=lambda rt: SLOT_ORDER_MAP.get(rt['routine'].slot, 3))
 
         overall_routine_pct = round((global_done / global_total * 100) if global_total else 0)
 
@@ -482,3 +488,35 @@ def calendar_events_api(request):
         'color': COLOR_MAP.get(r.frequency, '#888'),
         'extendedProps': {'frequency': r.frequency, 'description': r.description},
     } for r in qs], safe=False)
+
+
+@require_POST
+def routine_item_toggle_api(request, item_id):
+    """
+    Toggle today's completion state for a single RoutineItem.
+    Returns JSON: { done: bool, routine_pct: int, routine_done: int, routine_total: int }
+    The dashboard JS calls this on checkbox click.
+    """
+    from routines.models import RoutineItem, RoutineCompletion
+    from django.shortcuts import get_object_or_404
+
+    today = timezone.now().date()
+    item = get_object_or_404(RoutineItem, pk=item_id, is_active=True)
+
+    # True = now done, False = un-done
+    new_state = item.toggle_today(today)
+
+    # Recalculate parent routine progress so the UI can update the % badge
+    routine = item.routine
+    done_count, total_count = routine.today_progress(today)
+    pct = routine.completion_pct(today)
+
+    return JsonResponse({
+        'ok': True,
+        'done': new_state,
+        'item_id': item_id,
+        'routine_id': routine.id,
+        'routine_pct': pct,
+        'routine_done': done_count,
+        'routine_total': total_count,
+    })

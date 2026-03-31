@@ -342,6 +342,262 @@
         transition: color 0.15s;
     }
     .cal-nav-btn:hover { color: rgba(255,255,255,0.8); }
+
+ 
+    /* ── Fixed-height stat cards (Row 1) ─────────────────────────────── */
+    .stat-card-fixed {
+        height: 140px;          /* tweak if content overflows */
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+ 
+    /* ── Routine slot section header ──────────────────────────────────── */
+    .routine-slot-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 0 5px;
+        margin-bottom: 4px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .routine-slot-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        letter-spacing: 0.12em;
+        color: var(--bs-warning);
+        font-weight: 600;
+    }
+    .routine-slot-meta {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        color: rgba(255,255,255,0.25);
+        letter-spacing: 0.04em;
+    }
+    .routine-slot-hr {
+        flex: 1;
+        height: 1px;
+        background: rgba(255,167,0,0.15);
+        border: none;
+    }
+ 
+    /* ── Individual routine block within a slot ───────────────────────── */
+    .routine-block {
+        margin-bottom: 14px;
+    }
+    .routine-block:last-child { margin-bottom: 0; }
+ 
+    .routine-block-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 0 4px;
+    }
+    .routine-block-name {
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        color: rgba(255,255,255,0.85);
+        flex: 1;
+    }
+    .routine-block-pct {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        min-width: 34px;
+        text-align: right;
+        font-weight: 600;
+        transition: color 0.2s;
+    }
+    .routine-block-pct.is-complete { color: var(--bs-theme); }
+    .routine-block-pct.is-partial  { color: var(--bs-warning); }
+    .routine-block-pct.is-empty    { color: rgba(255,255,255,0.3); }
+ 
+    .routine-streak {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 8px;
+        letter-spacing: 0.05em;
+        padding: 1px 5px 2px;
+        background: rgba(255,255,255,0.06);
+        color: rgba(255,255,255,0.35);
+        border-radius: 0;
+        flex-shrink: 0;
+    }
+ 
+    /* ── Routine item rows ────────────────────────────────────────────── */
+    .rt-item-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 2px 4px 10px;
+        border-radius: 0;
+        cursor: pointer;
+        transition: background 0.12s;
+        user-select: none;
+    }
+    .rt-item-row:hover { background: rgba(255,255,255,0.04); }
+ 
+    .rt-item-check {
+        width: 14px;
+        height: 14px;
+        border-radius: 2px;
+        border: 1.5px solid rgba(255,255,255,0.2);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+        font-size: 9px;
+        color: transparent;
+    }
+    .rt-item-row.is-done .rt-item-check {
+        background: var(--bs-theme);
+        border-color: var(--bs-theme);
+        color: rgba(0,0,0,0.8);
+    }
+    .rt-item-row.is-done .rt-item-check::after {
+        content: '✓';
+        font-size: 9px;
+        font-weight: 700;
+    }
+ 
+    .rt-item-cat {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: rgba(255,255,255,0.2);
+    }
+ 
+    .rt-item-title {
+        font-size: 12px;
+        color: rgba(255,255,255,0.75);
+        flex: 1;
+        transition: all 0.15s;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .rt-item-row.is-done .rt-item-title {
+        color: rgba(255,255,255,0.25);
+        text-decoration: line-through;
+    }
+ 
+    /* Loading/spinner state while toggling */
+    .rt-item-row.is-loading .rt-item-check {
+        border-color: rgba(255,255,255,0.4);
+        animation: rt-pulse 0.6s ease-in-out infinite alternate;
+    }
+    @keyframes rt-pulse {
+        from { opacity: 0.4; }
+        to   { opacity: 1;   }
+    }
+ 
+    /* Progress bar under routine name */
+    .routine-progress-bar {
+        height: 2px;
+        background: rgba(255,255,255,0.07);
+        margin: 3px 0 8px;
+        overflow: hidden;
+    }
+    .routine-progress-fill {
+        height: 100%;
+        background: var(--bs-warning);
+        transition: width 0.3s ease;
+    }
+    .routine-progress-fill.complete { background: var(--bs-theme); }
+ 
+    /* Category dot colours */
+    .cat-body        { background: #60a5fa; }
+    .cat-self_care   { background: #f472b6; }
+    .cat-hygiene     { background: #a78bfa; }
+    .cat-food        { background: #fb923c; }
+    .cat-work        { background: #38bdf8; }
+    .cat-code        { background: var(--bs-theme); }
+    .cat-cleaning    { background: #94a3b8; }
+    .cat-pet         { background: #fbbf24; }
+    .cat-bedtime     { background: #818cf8; }
+    .cat-wakeup      { background: #fde68a; }
+    .cat-other       { background: rgba(255,255,255,0.2); }
+ 
+    /* ── Goal progress compact table ──────────────────────────────────── */
+    .goal-row {
+        padding: 7px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .goal-row:last-child { border-bottom: 0; }
+    .goal-row-name {
+        font-size: 12px;
+        color: rgba(255,255,255,0.82);
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .goal-row-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .goal-bar-wrap {
+        flex: 1;
+        height: 3px;
+        background: rgba(255,255,255,0.07);
+        overflow: hidden;
+    }
+    .goal-bar-fill {
+        height: 100%;
+        transition: width 0.3s;
+    }
+    .goal-bar-fill.hi   { background: var(--bs-theme); }
+    .goal-bar-fill.mid  { background: var(--bs-warning); }
+    .goal-bar-fill.lo   { background: #f87171; }
+    .goal-pct-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        min-width: 28px;
+        text-align: right;
+        flex-shrink: 0;
+    }
+    .goal-pct-label.hi  { color: var(--bs-theme); }
+    .goal-pct-label.mid { color: var(--bs-warning); }
+    .goal-pct-label.lo  { color: #f87171; }
+ 
+    /* ── Open Tasks compact list ────────────────────────────────────────── */
+    .task-row {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        padding: 5px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        font-size: 12px;
+    }
+    .task-row:last-child { border-bottom: 0; }
+    .task-row-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 4px;
+    }
+    .task-row-dot.p-critical { background: #f87171; }
+    .task-row-dot.p-high     { background: var(--bs-warning); }
+    .task-row-dot.p-medium   { background: var(--bs-theme); }
+    .task-row-dot.p-low      { background: rgba(255,255,255,0.25); }
+    .task-row-name {
+        flex: 1;
+        color: rgba(255,255,255,0.78);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .task-row-date {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        color: rgba(255,255,255,0.28);
+        flex-shrink: 0;
+    }
+    .task-row-date.overdue { color: #f87171; }
+ 
 </style>
 </head>
 
@@ -576,20 +832,20 @@
             </div>
         </div>
 
-        <!-- ── ROW 1 — Four stat cards ────────────────────────────────── -->
-        <div class="row">
-
+         <!-- ── ROW 1 — Four stat cards (fixed height) ─────────────────── -->
+        <div class="row row-cols-xl-4 row-cols-lg-2 g-0 mb-0">
+ 
             <!-- TASKS DUE -->
-            <div class="col-xl-3 col-lg-6">
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex fw-bold small mb-3">
+            <div class="col pe-0 ps-0">
+                <div class="card mb-3 me-3">
+                    <div class="card-body stat-card-fixed">
+                        <div class="d-flex fw-bold small mb-2">
                             <span class="flex-grow-1">TASKS DUE</span>
                             {% if tasks_overdue_count > 0 %}
                             <span class="badge bg-danger bg-opacity-20 text-danger rounded-0 fs-9px">{{ tasks_overdue_count }} OVERDUE</span>
                             {% endif %}
                         </div>
-                        <div class="row align-items-center mb-2">
+                        <div class="row align-items-center">
                             <div class="col-7">
                                 <h3 class="mb-0">{{ tasks_due_count }}</h3>
                             </div>
@@ -597,10 +853,9 @@
                                 <div id="chart-tasks-due" class="mt-n2"></div>
                             </div>
                         </div>
-                        <div class="small text-inverse text-opacity-50 text-truncate">
-                            <i class="bi bi-check2 me-1"></i> {{ tasks_in_progress }} in progress<br>
-                            <i class="bi bi-list-check me-1"></i> {{ tasks_todo_count }} total open<br>
-                            <i class="bi bi-graph-up me-1"></i> {{ task_completion_rate }}% 30-day rate
+                        <div class="small text-inverse text-opacity-50 text-truncate mt-auto">
+                            <i class="bi bi-circle-fill fs-6px me-1 text-theme"></i> {{ tasks_due_today.count }} today &nbsp;&middot;&nbsp;
+                            <i class="bi bi-circle-fill fs-6px me-1 text-inverse text-opacity-25"></i> {{ tasks_in_progress }} in progress
                         </div>
                     </div>
                     <div class="card-arrow">
@@ -609,27 +864,25 @@
                     </div>
                 </div>
             </div>
-
-            <!-- TODAY'S ROUTINES -->
-            <div class="col-xl-3 col-lg-6">
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex fw-bold small mb-3">
-                            <span class="flex-grow-1">TODAY'S ROUTINES</span>
-                            <span class="text-inverse text-opacity-50">{{ routine_pct }}%</span>
+ 
+            <!-- ROUTINES -->
+            <div class="col pe-0 ps-0">
+                <div class="card mb-3 me-3">
+                    <div class="card-body stat-card-fixed">
+                        <div class="d-flex fw-bold small mb-2">
+                            <span class="flex-grow-1">ROUTINES</span>
+                            <span class="text-theme">{{ routine_done }}/{{ routine_total }}</span>
                         </div>
-                        <div class="row align-items-center mb-2">
+                        <div class="row align-items-center">
                             <div class="col-7">
-                                <h3 class="mb-0">{{ routine_done }}<small class="fs-14px text-inverse text-opacity-40"> / {{ routine_total }}</small></h3>
+                                <h3 class="mb-0">{{ routine_pct }}<small class="fs-14px text-inverse text-opacity-40">%</small></h3>
                             </div>
                             <div class="col-5">
                                 <div id="chart-routines" class="mt-n3 mb-n2"></div>
                             </div>
                         </div>
-                        <div class="small text-inverse text-opacity-50 text-truncate">
-                            <i class="bi bi-arrow-repeat me-1"></i> {{ routines_today_count }} routine{{ routines_today_count|pluralize }} active today<br>
-                            <i class="bi bi-check-circle me-1"></i> {{ routine_done }} items complete<br>
-                            <i class="bi bi-hourglass-split me-1"></i> {{ routine_total|add:"-"|add:routine_done }} remaining
+                        <div class="small text-inverse text-opacity-50 text-truncate mt-auto">
+                            <i class="bi bi-arrow-repeat fs-6px me-1 text-warning"></i> {{ routines_today_count }} routine{{ routines_today_count|pluralize }} today
                         </div>
                     </div>
                     <div class="card-arrow">
@@ -638,15 +891,15 @@
                     </div>
                 </div>
             </div>
-
-            <!-- ACTIVE GOALS -->
-            <div class="col-xl-3 col-lg-6">
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex fw-bold small mb-3">
-                            <span class="flex-grow-1">ACTIVE GOALS</span>
+ 
+            <!-- GOALS -->
+            <div class="col pe-0 ps-0">
+                <div class="card mb-3 me-3">
+                    <div class="card-body stat-card-fixed">
+                        <div class="d-flex fw-bold small mb-2">
+                            <span class="flex-grow-1">GOALS</span>
                         </div>
-                        <div class="row align-items-center mb-2">
+                        <div class="row align-items-center">
                             <div class="col-7">
                                 <h3 class="mb-0">{{ goals_count }}</h3>
                             </div>
@@ -654,16 +907,11 @@
                                 <div id="chart-goals" class="mt-n3 mb-n2"></div>
                             </div>
                         </div>
-                        <div class="small text-inverse text-opacity-50 text-truncate">
-                            {% for g in goals_data|slice:":3" %}
+                        <div class="small text-inverse text-opacity-50 text-truncate mt-auto">
+                            {% for g in goals_data|slice:":2" %}
                             <i class="bi bi-circle-fill fs-6px me-1
-                                {% if g.pct >= 75 %}text-theme
-                                {% elif g.pct >= 40 %}text-warning
-                                {% else %}text-danger{% endif %}"></i>
-                            {{ g.goal.name|truncatechars:22 }}<br>
-                            {% empty %}
-                            <i class="bi bi-plus-circle me-1"></i> No active goals yet
-                            {% endfor %}
+                                {% if g.pct >= 75 %}text-theme{% elif g.pct >= 40 %}text-warning{% else %}text-danger{% endif %}"></i>{{ g.goal.name|truncatechars:18 }}<br>
+                            {% empty %}<i class="bi bi-plus-circle me-1"></i> No active goals{% endfor %}
                         </div>
                     </div>
                     <div class="card-arrow">
@@ -672,16 +920,16 @@
                     </div>
                 </div>
             </div>
-
+ 
             <!-- HABITS -->
-            <div class="col-xl-3 col-lg-6">
+            <div class="col pe-0 ps-0">
                 <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex fw-bold small mb-3">
+                    <div class="card-body stat-card-fixed">
+                        <div class="d-flex fw-bold small mb-2">
                             <span class="flex-grow-1">HABITS</span>
-                            <span class="text-inverse text-opacity-50">{{ habits_logged_today }}/{{ habits_count }} TODAY</span>
+                            <span class="text-inverse text-opacity-50">{{ habits_logged_today }}/{{ habits_count }}</span>
                         </div>
-                        <div class="row align-items-center mb-2">
+                        <div class="row align-items-center">
                             <div class="col-7">
                                 <h3 class="mb-0">{{ habits_logged_today }}<small class="fs-14px text-inverse text-opacity-40"> / {{ habits_count }}</small></h3>
                             </div>
@@ -689,13 +937,10 @@
                                 <div id="chart-habits" class="mt-n3 mb-n2"></div>
                             </div>
                         </div>
-                        <div class="small text-inverse text-opacity-50 text-truncate">
-                            {% for h in habits_data|slice:":3" %}
-                            <i class="bi bi-circle-fill fs-6px me-1 {% if h.logged %}text-theme{% else %}text-inverse text-opacity-25{% endif %}"></i>
-                            {{ h.habit.name|truncatechars:22 }}<br>
-                            {% empty %}
-                            <i class="bi bi-plus-circle me-1"></i> No habits tracked yet
-                            {% endfor %}
+                        <div class="small text-inverse text-opacity-50 text-truncate mt-auto">
+                            {% for h in habits_data|slice:":2" %}
+                            <i class="bi bi-circle-fill fs-6px me-1 {% if h.logged %}text-theme{% else %}text-inverse text-opacity-25{% endif %}"></i>{{ h.habit.name|truncatechars:18 }}<br>
+                            {% empty %}<i class="bi bi-plus-circle me-1"></i> No habits yet{% endfor %}
                         </div>
                     </div>
                     <div class="card-arrow">
@@ -704,326 +949,338 @@
                     </div>
                 </div>
             </div>
-
+ 
         </div>
         <!-- END ROW 1 -->
 
-
-        <!-- ── ROW 2 — Routines + Tasks ───────────────────────────────── -->
+                <!-- ── MAIN CONTENT — Left 8 / Right 4 ──────────────────────── -->
         <div class="row">
+ 
+            <!-- ════════════════════════ LEFT col-xl-8 ═══════════════════ -->
             <div class="col-xl-8">
-                <div class="row">
-
-
-            <!-- TODAY'S ROUTINES CHECKLIST -->
-            <div class="col-xl-12">
+ 
+                <!-- ── TODAY'S ROUTINES (full-width, slot-grouped) ─────── -->
                 <div class="card mb-3">
                     <div class="card-body">
+ 
                         <div class="d-flex fw-bold small mb-3">
                             <span class="flex-grow-1">TODAY'S ROUTINES</span>
-                            <span class="text-theme">{{ routine_done }}/{{ routine_total }} COMPLETE</span>
+                            <span id="routine-global-pct" class="{% if routine_pct == 100 %}text-theme{% else %}text-warning{% endif %}">
+                                {{ routine_done }}/{{ routine_total }} COMPLETE
+                            </span>
                         </div>
-
+ 
                         {% if today_routines %}
-                        <div class="row gx-4">
-                            {% for rt in today_routines %}
-                            <div class="col-md-6 mb-3">
-                                <!-- Routine header -->
-                                <div class="d-flex align-items-center mb-2">
-                                    <div class="flex-1">
-                                        <div class="fw-bold text-inverse fs-12px text-truncate" style="letter-spacing:0.04em;">
-                                            {{ rt.routine.name|upper }}
-                                        </div>
-                                        <div class="fs-10px text-inverse text-opacity-40" style="font-family:'JetBrains Mono',monospace;">
-                                            {{ rt.routine.get_slot_display|upper }} &middot; {{ rt.routine.day_labels }}
-                                        </div>
-                                    </div>
-                                    <div class="ms-2 text-end">
-                                        <span class="fs-11px fw-bold {% if rt.pct == 100 %}text-theme{% else %}text-inverse text-opacity-60{% endif %}">{{ rt.pct }}%</span>
-                                        {% if rt.streak > 0 %}
-                                        <div class="fs-9px text-inverse text-opacity-40">🔥 {{ rt.streak }}d</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <!-- Progress bar -->
-                                <div class="progress mb-2" style="height:2px;">
-                                    <div class="progress-bar bg-theme" style="width:{{ rt.pct }}%"></div>
-                                </div>
-                                <!-- Items -->
-                                {% for entry in rt.items %}
-                                <div class="routine-item-row">
-                                    <div class="routine-item-dot {% if entry.done %}done{% endif %}"></div>
-                                    <div class="routine-item-label {% if entry.done %}done{% endif %}">
-                                        {{ entry.item.title }}
-                                    </div>
-                                    {% if entry.item.category %}
-                                    <span class="badge bg-secondary bg-opacity-20 text-inverse text-opacity-50 rounded-0 fs-8px">
-                                        {{ entry.item.category|upper }}
-                                    </span>
+ 
+                        {% comment %} {# Group routines by slot. We iterate in slot order:
+                           morning → afternoon → evening.
+                           Django templates can't group natively so we use three
+                           filtered passes — simple and readable. #} {% endcomment %}
+ 
+                        {% with morning_routines=today_routines|dictsort:"routine.slot" %}
+ 
+                        {# ── MORNING ───────────────────────────────────── #}
+                        {% comment %} {% for rt in today_routines %}{% if rt.routine.slot == 'morning' %}
+                        {% if forloop.first or not forloop.revcounter0 %}
+                        {% endif %}
+                        {% endfor %} {% endcomment %}
+ 
+                        {% comment %} {# We'll use a simpler approach: one pass, emit slot header when slot changes.
+                           Since today_routines is already sorted slot→order in views.py,
+                           we just need to track the current slot.
+                           Django templates track "previous" with {% ifchanged %} #} {% endcomment %}
+ 
+                        {% for rt in today_routines %}
+ 
+                            {# Slot section divider #}
+                            {% ifchanged rt.routine.slot %}
+                            {% if not forloop.first %}</div>{% endif %}{# close previous slot-section #}
+                            <div class="slot-section mb-0">
+                            <div class="routine-slot-header">
+                                <span class="routine-slot-label">
+                                    {% if rt.routine.slot == 'morning' %}⬡ MORNING
+                                    {% elif rt.routine.slot == 'afternoon' %}⬡ AFTERNOON
+                                    {% else %}⬡ EVENING{% endif %}
+                                </span>
+                                <div class="routine-slot-hr"></div>
+                            </div>
+                            {% endifchanged %}
+ 
+                            {# ── Individual routine block ─────────────── #}
+                            <div class="routine-block"
+                                 data-routine-id="{{ rt.routine.id }}">
+ 
+                                <div class="routine-block-header">
+                                    <span class="routine-block-name">{{ rt.routine.name|upper }}</span>
+                                    {% if rt.streak > 0 %}
+                                    <span class="routine-streak">🔥 {{ rt.streak }}d streak</span>
                                     {% endif %}
+                                    <span class="routine-block-pct
+                                        {% if rt.pct == 100 %}is-complete
+                                        {% elif rt.pct > 0 %}is-partial
+                                        {% else %}is-empty{% endif %}"
+                                          id="rt-pct-{{ rt.routine.id }}">
+                                        {{ rt.pct }}%
+                                    </span>
+                                </div>
+ 
+                                <!-- thin progress bar -->
+                                <div class="routine-progress-bar">
+                                    <div class="routine-progress-fill {% if rt.pct == 100 %}complete{% endif %}"
+                                         id="rt-bar-{{ rt.routine.id }}"
+                                         style="width:{{ rt.pct }}%"></div>
+                                </div>
+ 
+                                <!-- Item rows — two columns when ≥6 items -->
+                                <div class="{% if rt.items|length >= 6 %}row gx-0{% endif %}">
+                                {% for item in rt.items %}
+                                <div class="{% if rt.items|length >= 6 %}col-md-6{% endif %}">
+                                    <div class="rt-item-row {% if item.done %}is-done{% endif %}"
+                                        data-item-id="{{ item.item.id }}"
+                                        data-routine-id="{{ rt.routine.id }}"
+                                        onclick="toggleRoutineItem(this)">
+                                        <div class="rt-item-check"></div>
+                                        <div class="rt-item-cat cat-{{ item.item.category }}"></div>
+                                        <span class="rt-item-title">{{ item.item.title }}</span>
+                                    </div>
                                 </div>
                                 {% endfor %}
+                                </div>
+ 
                             </div>
-                            {% endfor %}
-                        </div>
+                            {# end routine-block #}
+ 
+                        {% empty %}
+                        {# handled below #}
+                        {% endfor %}
+                        </div>{# close last slot-section #}
+ 
+                        {% endwith %}
+ 
                         {% else %}
-                        <div class="hud-empty">NO ROUTINES SCHEDULED FOR {{ today|date:"l"|upper }}</div>
+                        <div class="text-center py-5 text-inverse text-opacity-25 fs-10px"
+                             style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">
+                            NO ROUTINES SCHEDULED FOR TODAY
+                        </div>
                         {% endif %}
+ 
                     </div>
                     <div class="card-arrow">
                         <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
                         <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
                     </div>
                 </div>
-            </div>
-
-            {% comment %} <!-- TASKS — Overdue + Due Today -->
-            <div class="col-xl-6">
+                <!-- END TODAY'S ROUTINES -->
+ 
+ 
+                <!-- ── ROW: Goal Progress + Habit Tracker ──────────────── -->
+                <div class="row">
+ 
+                    <!-- GOAL PROGRESS -->
+                    <div class="col-xl-6">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex fw-bold small mb-3">
+                                    <span class="flex-grow-1">GOAL PROGRESS</span>
+                                    <span class="text-inverse text-opacity-40" style="font-family:'JetBrains Mono',monospace; font-size:10px;">{{ goals_count }} ACTIVE</span>
+                                </div>
+ 
+                                <div class="hud-scroll-area" style="max-height:260px;">
+                                {% if goals_data %}
+                                {% for g in goals_data %}
+                                <div class="goal-row">
+                                    <div class="goal-row-name">
+                                        {% if g.is_overdue %}<i class="bi bi-exclamation-circle-fill text-danger me-1 fs-10px"></i>{% endif %}
+                                        {{ g.goal.name }}
+                                    </div>
+                                    <div class="goal-row-meta">
+                                        <div class="goal-bar-wrap">
+                                            <div class="goal-bar-fill
+                                                {% if g.pct >= 75 %}hi{% elif g.pct >= 40 %}mid{% else %}lo{% endif %}"
+                                                 style="width:{{ g.pct }}%"></div>
+                                        </div>
+                                        <span class="goal-pct-label
+                                            {% if g.pct >= 75 %}hi{% elif g.pct >= 40 %}mid{% else %}lo{% endif %}">
+                                            {{ g.pct }}%
+                                        </span>
+                                    </div>
+                                    {% if g.goal.due_date %}
+                                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,0.2); margin-top:3px; letter-spacing:0.04em;">
+                                        {{ g.open_items }} item{{ g.open_items|pluralize }} open
+                                        &middot; TARGET {{ g.goal.due_date|date:"M j"|upper }}
+                                        {% if g.stalled_days and g.stalled_days > 7 %}
+                                        &middot; <span style="color:var(--bs-warning);">{{ g.stalled_days }}D STALLED</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                                {% else %}
+                                <div class="text-center py-4 text-inverse text-opacity-25 fs-10px"
+                                     style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">
+                                    NO ACTIVE GOALS
+                                </div>
+                                {% endif %}
+                                </div>
+ 
+                            </div>
+                            <div class="card-arrow">
+                                <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
+                                <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END GOAL PROGRESS -->
+ 
+ 
+                    <!-- HABIT TRACKER (this week) -->
+                    <div class="col-xl-6">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex fw-bold small mb-3">
+                                    <span class="flex-grow-1">HABIT TRACKER</span>
+                                    <span class="text-inverse text-opacity-40" style="font-family:'JetBrains Mono',monospace; font-size:10px;">THIS WEEK</span>
+                                </div>
+ 
+                                <!-- Week day header row -->
+                                {% if habits_data %}
+                                <div class="d-flex mb-2">
+                                    <div style="width:150px; flex-shrink:0;"></div>
+                                    <div class="d-flex gap-1 ms-2" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:rgba(255,255,255,0.25); letter-spacing:0.04em;">
+                                        <span style="width:12px;text-align:center;">M</span>
+                                        <span style="width:12px;text-align:center;">T</span>
+                                        <span style="width:12px;text-align:center;">W</span>
+                                        <span style="width:12px;text-align:center;">T</span>
+                                        <span style="width:12px;text-align:center;">F</span>
+                                        <span style="width:12px;text-align:center;">S</span>
+                                        <span style="width:12px;text-align:center;">S</span>
+                                    </div>
+                                    <div class="ms-auto" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:rgba(255,255,255,0.25); letter-spacing:0.04em; width:36px; text-align:right;">STK</div>
+                                </div>
+ 
+                                <div class="hud-scroll-area" style="max-height:220px;">
+                                {% for h in habits_data %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <div style="width:150px; flex-shrink:0;">
+                                        <div class="fs-11px text-inverse text-truncate">
+                                            {% if h.logged %}
+                                            <i class="bi bi-check-circle-fill text-theme me-1 fs-9px"></i>
+                                            {% else %}
+                                            <i class="bi bi-circle text-inverse text-opacity-20 me-1 fs-9px"></i>
+                                            {% endif %}
+                                            {{ h.habit.name|truncatechars:20 }}
+                                        </div>
+                                    </div>
+                                    <!-- Day dots -->
+                                    <div class="d-flex gap-1 ms-2">
+                                        {% for log in h.week_logs %}
+                                        <div style="width:12px; height:12px; border-radius:2px;
+                                            {% if log %}background:rgba(12,208,150,{% if log.done %}0.85{% else %}0.15{% endif %});
+                                            {% else %}background:rgba(255,255,255,0.06);{% endif %}">
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="ms-auto" style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,0.3); width:36px; text-align:right;">
+                                        {% if h.streak > 0 %}{{ h.streak }}{% else %}—{% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                </div>
+ 
+                                {% else %}
+                                <div class="text-center py-4 text-inverse text-opacity-25 fs-10px"
+                                     style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">
+                                    NO HABITS TRACKED YET
+                                </div>
+                                {% endif %}
+ 
+                            </div>
+                            <div class="card-arrow">
+                                <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
+                                <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END HABIT TRACKER -->
+ 
+                </div>
+                <!-- END Goal + Habits row -->
+ 
+ 
+                <!-- ── OPEN TASKS ────────────────────────────────────────── -->
                 <div class="card mb-3">
                     <div class="card-body">
+ 
                         <div class="d-flex fw-bold small mb-3">
                             <span class="flex-grow-1">OPEN TASKS</span>
-                            {% if tasks_overdue_count > 0 %}
-                            <span class="badge bg-danger bg-opacity-15 text-danger rounded-0 fs-9px me-2">{{ tasks_overdue_count }} OVERDUE</span>
-                            {% endif %}
-                            <span class="text-inverse text-opacity-50">{{ tasks_due_today.count }} DUE TODAY</span>
+                            <span class="text-inverse text-opacity-40" style="font-family:'JetBrains Mono',monospace; font-size:10px;">
+                                {{ tasks_todo_count }} REMAINING
+                            </span>
                         </div>
-
-                        <div class="table-responsive">
-                            <table class="w-100 mb-0 small align-middle">
-                                <tbody>
-
-                                    {% for task in tasks_overdue %}
-                                    <tr class="task-overdue">
-                                        <td class="py-2 pe-3">
-                                            <div class="fw-500 text-inverse text-truncate" style="max-width:240px;">{{ task.name }}</div>
-                                            <div class="fs-10px text-danger" style="font-family:'JetBrains Mono',monospace;">
-                                                OVERDUE &middot; {{ task.due_date|date:"M j" }}
-                                            </div>
-                                        </td>
-                                        <td class="pe-3 text-nowrap">
-                                            {% if task.category %}
-                                            <span class="badge bg-secondary bg-opacity-25 text-inverse text-opacity-70 rounded-0 pt-5px fs-9px">{{ task.category|upper }}</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-nowrap">
-                                            <i class="bi bi-circle-fill fs-6px priority-{{ task.priority }} me-1"></i>
-                                            <span class="text-inverse text-opacity-50 fs-10px">{{ task.get_priority_display|upper }}</span>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-
-                                    {% for task in tasks_due_today %}
-                                    <tr class="task-today">
-                                        <td class="py-2 pe-3">
-                                            <div class="fw-500 text-inverse text-truncate" style="max-width:240px;">{{ task.name }}</div>
-                                            <div class="fs-10px text-theme" style="font-family:'JetBrains Mono',monospace;">
-                                                DUE TODAY &middot; {{ task.get_status_display|upper }}
-                                            </div>
-                                        </td>
-                                        <td class="pe-3 text-nowrap">
-                                            {% if task.category %}
-                                            <span class="badge bg-secondary bg-opacity-25 text-inverse text-opacity-70 rounded-0 pt-5px fs-9px">{{ task.category|upper }}</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-nowrap">
-                                            <i class="bi bi-circle-fill fs-6px priority-{{ task.priority }} me-1"></i>
-                                            <span class="text-inverse text-opacity-50 fs-10px">{{ task.get_priority_display|upper }}</span>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-
-                                    {% if not tasks_overdue and not tasks_due_today %}
-                                    <tr>
-                                        <td colspan="3">
-                                            <div class="hud-empty">ALL CLEAR — NOTHING DUE</div>
-                                        </td>
-                                    </tr>
-                                    {% endif %}
-
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {% if tasks_upcoming %}
-                        <div class="mt-3 pt-3 border-top border-white border-opacity-10">
-                            <div class="fs-10px fw-bold text-inverse text-opacity-40 mb-2" style="letter-spacing:0.06em;">UPCOMING</div>
-                            {% for task in tasks_upcoming %}
-                            <div class="d-flex align-items-center mb-1">
-                                <i class="bi bi-circle-fill fs-6px text-inverse text-opacity-20 me-2"></i>
-                                <span class="text-inverse text-opacity-60 fs-12px flex-1 text-truncate">{{ task.name }}</span>
-                                <span class="text-inverse text-opacity-30 fs-10px ms-2" style="font-family:'JetBrains Mono',monospace;">
-                                    {{ task.due_date|date:"M j" }}
-                                </span>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
-                    </div>
-                </div>
-            </div> {% endcomment %}
-
-        </div>
-        <!-- END ROW 2 -->
-
-
-        <!-- ── ROW 3 — Goals + Habits ─────────────────────────────────── -->
-        <div class="row">
-
-            <!-- GOALS PROGRESS -->
-            <div class="col-xl-6">
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex fw-bold small mb-3">
-                            <span class="flex-grow-1">GOAL PROGRESS</span>
-                            <span class="text-inverse text-opacity-50">{{ goals_count }} ACTIVE</span>
-                        </div>
-
-                        {% if goals_data %}
-                        {% for g in goals_data %}
-                        <div class="mb-3">
-                            <div class="d-flex align-items-start mb-1">
-                                <div class="flex-1">
-                                    <div class="fw-500 text-inverse fs-13px">{{ g.goal.name }}</div>
-                                    <div class="fs-10px text-inverse text-opacity-40" style="font-family:'JetBrains Mono',monospace;">
-                                        {% if g.goal.category %}{{ g.goal.get_category_display|upper }} &middot; {% endif %}
-                                        {{ g.open_items }} ITEM{{ g.open_items|pluralize }} OPEN
-                                        {% if g.is_overdue %}&middot; <span class="text-danger">OVERDUE</span>{% endif %}
-                                        {% if g.stalled_days and g.stalled_days > 7 %}&middot; <span class="text-warning">{{ g.stalled_days }}D SINCE PROGRESS</span>{% endif %}
-                                    </div>
+ 
+                        <div class="row gx-4">
+ 
+                            <!-- Overdue column -->
+                            {% if tasks_overdue %}
+                            <div class="col-xl-4">
+                                <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.08em; color:#f87171; margin-bottom:6px;">OVERDUE</div>
+                                <div class="hud-scroll-area" style="max-height:160px;">
+                                {% for t in tasks_overdue %}
+                                <div class="task-row">
+                                    <div class="task-row-dot p-{{ t.priority }}"></div>
+                                    <span class="task-row-name">{{ t.name }}</span>
+                                    <span class="task-row-date overdue">{{ t.due_date|date:"M j"|upper }}</span>
                                 </div>
-                                <div class="ms-3 text-end">
-                                    <span class="fw-bold fs-14px
-                                        {% if g.pct >= 75 %}text-theme
-                                        {% elif g.pct >= 40 %}text-warning
-                                        {% else %}text-danger{% endif %}">{{ g.pct }}%</span>
-                                    <div class="fs-9px text-inverse text-opacity-30">
-                                        {{ g.goal.get_priority_display|upper }}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="progress mb-1" style="height:3px; background:rgba(255,255,255,0.06);">
-                                <div class="{{ g.color_class }} progress-bar" style="width:{{ g.pct }}%;"></div>
-                            </div>
-                            {% if g.goal.due_date %}
-                            <div class="fs-9px text-inverse text-opacity-25" style="font-family:'JetBrains Mono',monospace;">
-                                TARGET: {{ g.goal.due_date|date:"N j, Y"|upper }}
-                            </div>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                        {% else %}
-                        <div class="hud-empty">NO ACTIVE GOALS — ADD ONE VIA ADMIN</div>
-                        {% endif %}
-
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- HABITS TRACKER -->
-            <div class="col-xl-6">
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex fw-bold small mb-3">
-                            <span class="flex-grow-1">HABIT TRACKER</span>
-                            <span class="text-inverse text-opacity-50">THIS WEEK</span>
-                        </div>
-
-                        <!-- Week day header -->
-                        {% if habits_data %}
-                        <div class="d-flex mb-2 ps-0">
-                            <div style="width:180px; flex-shrink:0;"></div>
-                            <div class="d-flex gap-1 ms-3" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:rgba(255,255,255,0.3); letter-spacing:0.04em;">
-                                <span style="width:10px;text-align:center;">M</span>
-                                <span style="width:10px;text-align:center;">T</span>
-                                <span style="width:10px;text-align:center;">W</span>
-                                <span style="width:10px;text-align:center;">T</span>
-                                <span style="width:10px;text-align:center;">F</span>
-                                <span style="width:10px;text-align:center;">S</span>
-                                <span style="width:10px;text-align:center;">S</span>
-                            </div>
-                            <div class="ms-auto" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:rgba(255,255,255,0.3); letter-spacing:0.04em; width:40px; text-align:right;">STREAK</div>
-                        </div>
-
-                        {% for h in habits_data %}
-                        <div class="d-flex align-items-center mb-2">
-                            <!-- Name + type -->
-                            <div style="width:180px; flex-shrink:0;">
-                                <div class="fs-12px text-inverse text-truncate">
-                                    {% if h.logged %}
-                                    <i class="bi bi-check-circle-fill text-theme me-1 fs-10px"></i>
-                                    {% else %}
-                                    <i class="bi bi-circle text-inverse text-opacity-20 me-1 fs-10px"></i>
-                                    {% endif %}
-                                    {{ h.habit.name }}
-                                </div>
-                                <div class="fs-9px text-inverse text-opacity-30" style="font-family:'JetBrains Mono',monospace;">
-                                    {{ h.habit.get_metric_type_display|upper }}
-                                    {% if h.display != '—' %} &middot; {{ h.display }}{% endif %}
-                                </div>
-                            </div>
-                            <!-- Week dots -->
-                            <div class="habit-week-dots ms-3">
-                                {% for log in h.week_logs %}
-                                    {% if log is not None %}
-                                        {% if h.habit.metric_type == 'yn' %}
-                                            {% if log.yn_value %}
-                                            <div class="habit-dot logged" title="{{ log.logged_on }}"></div>
-                                            {% else %}
-                                            <div class="habit-dot missed" title="{{ log.logged_on }}"></div>
-                                            {% endif %}
-                                        {% else %}
-                                            {% if log.scale_value is not None %}
-                                            <div class="habit-dot logged" title="{{ log.logged_on }}: {{ log.scale_value }}"></div>
-                                            {% else %}
-                                            <div class="habit-dot missed"></div>
-                                            {% endif %}
-                                        {% endif %}
-                                    {% else %}
-                                    <div class="habit-dot"></div>
-                                    {% endif %}
                                 {% endfor %}
+                                </div>
                             </div>
-                            <!-- Streak -->
-                            <div class="ms-auto text-end" style="width:40px; font-family:'JetBrains Mono',monospace; font-size:11px;">
-                                {% if h.streak > 0 %}
-                                <span class="text-theme fw-bold">{{ h.streak }}</span>
-                                {% else %}
-                                <span class="text-inverse text-opacity-20">0</span>
-                                {% endif %}
+                            {% endif %}
+ 
+                            <!-- Due today column -->
+                            <div class="{% if tasks_overdue %}col-xl-4{% else %}col-xl-6{% endif %}">
+                                <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.08em; color:var(--bs-theme); margin-bottom:6px;">DUE TODAY</div>
+                                <div class="hud-scroll-area" style="max-height:160px;">
+                                {% for t in tasks_due_today %}
+                                <div class="task-row">
+                                    <div class="task-row-dot p-{{ t.priority }}"></div>
+                                    <span class="task-row-name">{{ t.name }}</span>
+                                    <span class="task-row-date">{{ t.get_priority_display|upper }}</span>
+                                </div>
+                                {% empty %}
+                                <div class="text-inverse text-opacity-25 fs-10px" style="font-family:'JetBrains Mono',monospace;">ALL CLEAR</div>
+                                {% endfor %}
+                                </div>
                             </div>
+ 
+                            <!-- Upcoming column -->
+                            <div class="{% if tasks_overdue %}col-xl-4{% else %}col-xl-6{% endif %}">
+                                <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.08em; color:rgba(255,255,255,0.35); margin-bottom:6px;">UPCOMING</div>
+                                <div class="hud-scroll-area" style="max-height:160px;">
+                                {% for t in tasks_upcoming %}
+                                <div class="task-row">
+                                    <div class="task-row-dot p-{{ t.priority }}"></div>
+                                    <span class="task-row-name">{{ t.name }}</span>
+                                    <span class="task-row-date">{{ t.due_date|date:"M j"|upper }}</span>
+                                </div>
+                                {% empty %}
+                                <div class="text-inverse text-opacity-25 fs-10px" style="font-family:'JetBrains Mono',monospace;">NONE UPCOMING</div>
+                                {% endfor %}
+                                </div>
+                            </div>
+ 
                         </div>
-                        {% endfor %}
-
-                        {% else %}
-                        <div class="hud-empty">NO HABITS TRACKED YET — ADD VIA ADMIN</div>
-                        {% endif %}
-
+ 
                     </div>
                     <div class="card-arrow">
                         <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
                         <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
                     </div>
                 </div>
-            </div>
-
-        </div>
-        <!-- END ROW 3 -->
-
-
-        <!-- ── ROW 4 — Upcoming Reminders (full width) ────────────────── -->
-        {% if upcoming_reminders %}
-        <div class="row">
-            <div class="col-12">
+                <!-- END OPEN TASKS -->
+ 
+ 
+                <!-- ── UPCOMING REMINDERS ────────────────────────────────── -->
+                {% if upcoming_reminders %}
                 <div class="card mb-3">
                     <div class="card-body">
                         <div class="d-flex fw-bold small mb-3">
@@ -1065,97 +1322,70 @@
                         <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
                     </div>
                 </div>
+                {% endif %}
+                <!-- END UPCOMING REMINDERS -->
+ 
             </div>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- ════════════════════════════════════════════════════════ -->
-            <!-- RIGHT COLUMN: Day view, upcoming, mini calendar          -->
-            <!-- ════════════════════════════════════════════════════════ -->
+            <!-- END LEFT col-xl-8 -->
+ 
+ 
+            <!-- ════════════════════════ RIGHT col-xl-4 ══════════════════ -->
             <div class="col-xl-4">
  
-                <!-- ── A LOOK AT THE DAY ─────────────────────────────── -->
+                <!-- A LOOK AT THE DAY ─────────────────────────────────── -->
                 <div class="card mb-3">
                     <div class="card-body">
- 
                         <div class="d-flex fw-bold small mb-3">
                             <span class="flex-grow-1">A LOOK AT THE DAY</span>
                             <span class="text-inverse text-opacity-40" style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.06em;">
                                 {{ today|date:"M j"|upper }}
                             </span>
                         </div>
- 
                         <div class="hud-scroll-area" style="max-height:320px;">
                             {% if today_schedule %}
                                 {% for item in today_schedule %}
                                 <div class="sched-item">
-                                    <!-- source colour dot -->
                                     <div class="sched-dot sched-dot-{{ item.source }}"></div>
- 
                                     <div class="flex-fill" style="min-width:0;">
-                                        <div class="sched-title {% if item.done %}is-done{% endif %}">
-                                            {{ item.title }}
-                                        </div>
+                                        <div class="sched-title {% if item.done %}is-done{% endif %}">{{ item.title }}</div>
                                         <div class="sched-meta">
                                             <span class="sched-badge sched-badge-{{ item.source }}">{{ item.source_label }}</span>
-                                            <span class="sched-time{% if item.is_overdue %} is-overdue{% elif item.done %} is-logged{% endif %}">
-                                                {{ item.time_label }}
-                                            </span>
-                                            {% if item.show_pct %}
-                                            <span class="sched-pct">{{ item.pct }}%</span>
-                                            {% endif %}
+                                            <span class="sched-time{% if item.is_overdue %} is-overdue{% elif item.done %} is-logged{% endif %}">{{ item.time_label }}</span>
+                                            {% if item.show_pct %}<span class="sched-pct">{{ item.pct }}%</span>{% endif %}
                                         </div>
                                     </div>
- 
-                                    {% if item.done %}
-                                    <i class="bi bi-check-circle-fill sched-done-icon"></i>
-                                    {% endif %}
+                                    {% if item.done %}<i class="bi bi-check-circle-fill sched-done-icon"></i>{% endif %}
                                 </div>
                                 {% endfor %}
                             {% else %}
-                                <div class="text-center py-5 text-inverse text-opacity-25 fs-10px"
-                                     style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">
-                                    NOTHING SCHEDULED
-                                </div>
+                                <div class="text-center py-5 text-inverse text-opacity-25 fs-10px" style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">NOTHING SCHEDULED</div>
                             {% endif %}
                         </div>
- 
-                        <!-- Source legend -->
-                        <div class="d-flex flex-wrap gap-x-3 gap-1 mt-3 pt-2"
-                             style="border-top:1px solid rgba(255,255,255,0.07);">
-                            <span class="sched-time"><span class="sched-dot sched-dot-task d-inline-block me-1" style="vertical-align:middle; margin-top:-1px;"></span>TASK</span>
-                            <span class="sched-time ms-2"><span class="sched-dot sched-dot-routine d-inline-block me-1" style="vertical-align:middle; margin-top:-1px;"></span>ROUTINE</span>
-                            <span class="sched-time ms-2"><span class="sched-dot sched-dot-goal d-inline-block me-1" style="vertical-align:middle; margin-top:-1px;"></span>GOAL</span>
-                            <span class="sched-time ms-2"><span class="sched-dot sched-dot-habit d-inline-block me-1" style="vertical-align:middle; margin-top:-1px;"></span>HABIT</span>
+                        <div class="d-flex flex-wrap gap-1 mt-3 pt-2" style="border-top:1px solid rgba(255,255,255,0.07);">
+                            <span class="sched-time"><span class="sched-dot sched-dot-task d-inline-block me-1" style="vertical-align:middle;margin-top:-1px;"></span>TASK</span>
+                            <span class="sched-time ms-2"><span class="sched-dot sched-dot-routine d-inline-block me-1" style="vertical-align:middle;margin-top:-1px;"></span>ROUTINE</span>
+                            <span class="sched-time ms-2"><span class="sched-dot sched-dot-goal d-inline-block me-1" style="vertical-align:middle;margin-top:-1px;"></span>GOAL</span>
+                            <span class="sched-time ms-2"><span class="sched-dot sched-dot-habit d-inline-block me-1" style="vertical-align:middle;margin-top:-1px;"></span>HABIT</span>
                         </div>
- 
                     </div>
                     <div class="card-arrow">
                         <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
                         <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
                     </div>
                 </div>
-                <!-- END A LOOK AT THE DAY -->
  
- 
-                <!-- ── UPCOMING SOON ──────────────────────────────────── -->
+                <!-- UPCOMING SOON ────────────────────────────────────── -->
                 <div class="card mb-3">
                     <div class="card-body">
- 
                         <div class="d-flex fw-bold small mb-3">
                             <span class="flex-grow-1">UPCOMING SOON</span>
-                            <span class="text-inverse text-opacity-40" style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.06em;">
-                                NEXT 14 DAYS
-                            </span>
+                            <span class="text-inverse text-opacity-40" style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.06em;">NEXT 14 DAYS</span>
                         </div>
- 
                         <div class="hud-scroll-area" style="max-height:220px;">
                             {% if upcoming_soon %}
                                 {% for item in upcoming_soon %}
                                 <div class="sched-item">
                                     <div class="sched-dot sched-dot-{{ item.source }}" style="margin-top:3px;"></div>
- 
                                     <div class="flex-fill" style="min-width:0;">
                                         <div class="sched-title">{{ item.title }}</div>
                                         <div class="sched-meta">
@@ -1163,82 +1393,53 @@
                                             <span class="sched-time">{{ item.due_date|date:"M j"|upper }}</span>
                                         </div>
                                     </div>
- 
-                                    <!-- Days-until pill -->
-                                    {% if item.days_until == 1 %}
-                                        <span class="days-pill days-pill-1">1D</span>
-                                    {% elif item.days_until <= 3 %}
-                                        <span class="days-pill days-pill-3">{{ item.days_until }}D</span>
-                                    {% elif item.days_until <= 7 %}
-                                        <span class="days-pill days-pill-7">{{ item.days_until }}D</span>
-                                    {% else %}
-                                        <span class="days-pill days-pill-14">{{ item.days_until }}D</span>
-                                    {% endif %}
- 
+                                    {% if item.days_until == 1 %}<span class="days-pill days-pill-1">1D</span>
+                                    {% elif item.days_until <= 3 %}<span class="days-pill days-pill-3">{{ item.days_until }}D</span>
+                                    {% elif item.days_until <= 7 %}<span class="days-pill days-pill-7">{{ item.days_until }}D</span>
+                                    {% else %}<span class="days-pill days-pill-14">{{ item.days_until }}D</span>{% endif %}
                                 </div>
                                 {% endfor %}
                             {% else %}
-                                <div class="text-center py-4 text-inverse text-opacity-25 fs-10px"
-                                     style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">
-                                    CLEAR HORIZON — NOTHING DUE
-                                </div>
+                                <div class="text-center py-4 text-inverse text-opacity-25 fs-10px" style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">CLEAR HORIZON — NOTHING DUE</div>
                             {% endif %}
                         </div>
- 
                     </div>
                     <div class="card-arrow">
                         <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
                         <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
                     </div>
                 </div>
-                <!-- END UPCOMING SOON -->
  
- 
-                <!-- ── MINI CALENDAR ─────────────────────────────────── -->
+                <!-- MINI CALENDAR ────────────────────────────────────── -->
                 <div class="card mb-3">
                     <div class="card-body">
- 
-                        <!-- Header with month + prev/next nav -->
                         <div class="d-flex align-items-center fw-bold small mb-3">
                             <span class="flex-grow-1">CALENDAR</span>
                             <div class="d-flex align-items-center gap-1">
-                                <button id="cal-prev" class="cal-nav-btn">
-                                    <i class="bi bi-chevron-left"></i>
-                                </button>
-                                <span id="cal-month-label"
-                                      style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.06em; color:rgba(255,255,255,0.4); min-width:90px; text-align:center;">
-                                </span>
-                                <button id="cal-next" class="cal-nav-btn">
-                                    <i class="bi bi-chevron-right"></i>
-                                </button>
+                                <button id="cal-prev" class="cal-nav-btn"><i class="bi bi-chevron-left"></i></button>
+                                <span id="cal-month-label" style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.06em; color:rgba(255,255,255,0.4); min-width:90px; text-align:center;"></span>
+                                <button id="cal-next" class="cal-nav-btn"><i class="bi bi-chevron-right"></i></button>
                             </div>
                         </div>
- 
-                        <!-- Calendar grid (rendered by JS) -->
                         <div id="cal-grid" class="mini-cal-grid"></div>
- 
-                        <!-- Legend -->
-                        <div class="d-flex gap-1 flex-wrap mt-3 pt-2"
-                             style="border-top:1px solid rgba(255,255,255,0.07);">
+                        <div class="d-flex gap-1 flex-wrap mt-3 pt-2" style="border-top:1px solid rgba(255,255,255,0.07);">
                             <span class="sched-time"><span class="cal-dot cal-dot-task d-inline-block me-1" style="vertical-align:middle;"></span>TASKS</span>
                             <span class="sched-time ms-2"><span class="cal-dot cal-dot-goal d-inline-block me-1" style="vertical-align:middle;"></span>GOALS</span>
                             <span class="sched-time ms-2"><span class="cal-dot cal-dot-reminder d-inline-block me-1" style="vertical-align:middle;"></span>REMINDERS</span>
                         </div>
- 
                     </div>
                     <div class="card-arrow">
                         <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
                         <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
                     </div>
                 </div>
-                <!-- END MINI CALENDAR -->
  
             </div>
-            <!-- END RIGHT COLUMN col-xl-4 -->
-
-</div>
-    </div>
-    <!-- END #content -->
+            <!-- END RIGHT col-xl-4 -->
+ 
+        </div>
+        <!-- END MAIN CONTENT ROW -->
+         
 
 </div>
 <!-- END #app -->
@@ -1460,7 +1661,85 @@ new ApexCharts(document.getElementById('chart-habits'), {
 /* ══════════════════════════════════════════════════════════════
    AUTO REFRESH — full page reload every 60 seconds
 ══════════════════════════════════════════════════════════════ */
-setTimeout(() => location.reload(), 60 * 1000);
+{% comment %} setTimeout(() => location.reload(), 60 * 1000); {% endcomment %}
+</script>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   ROUTINE ITEM TOGGLE
+   Sends a POST to the toggle API and updates the UI in-place.
+════════════════════════════════════════════════════════════ */
+function toggleRoutineItem(row) {
+    if (row.classList.contains('is-loading')) return;
+ 
+    const itemId    = row.dataset.itemId;
+    const routineId = row.dataset.routineId;
+ 
+    // Optimistic loading state
+    row.classList.add('is-loading');
+ 
+    // Django CSRF token — reads from the cookie
+    function getCsrfToken() {
+        const m = document.cookie.match(/csrftoken=([^;]+)/);
+        return m ? m[1] : '';
+    }
+ 
+    fetch(`/api/routines/item/${itemId}/toggle/`, {
+        method:  'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(function (resp) { return resp.json(); })
+    .then(function (data) {
+        if (!data.ok) throw new Error('Toggle failed');
+ 
+        // Update the clicked row
+        row.classList.remove('is-loading');
+        if (data.done) {
+            row.classList.add('is-done');
+        } else {
+            row.classList.remove('is-done');
+        }
+ 
+        // Update the routine % badge
+        const pctEl = document.getElementById('rt-pct-' + routineId);
+        if (pctEl) {
+            pctEl.textContent = data.routine_pct + '%';
+            pctEl.className = 'routine-block-pct ' +
+                (data.routine_pct === 100 ? 'is-complete' :
+                 data.routine_pct > 0    ? 'is-partial'  : 'is-empty');
+        }
+ 
+        // Update the progress bar
+        const barEl = document.getElementById('rt-bar-' + routineId);
+        if (barEl) {
+            barEl.style.width = data.routine_pct + '%';
+            barEl.classList.toggle('complete', data.routine_pct === 100);
+        }
+ 
+        // Update the global header counter
+        const globalEl = document.getElementById('routine-global-pct');
+        if (globalEl) {
+            // Recount across all routines after a short delay so other
+            // concurrent toggles can settle — simplest is a full re-fetch
+            // but for now we just re-query the stats endpoint
+            fetch('/api/stats/')
+                .then(function (r) { return r.json(); })
+                .then(function (stats) {
+                    // We don't have done/total from stats endpoint so just
+                    // reload the text if total is available on the page.
+                    // Simplest safe approach: leave it until next 60-second refresh.
+                });
+        }
+    })
+    .catch(function (err) {
+        console.error('Toggle error:', err);
+        row.classList.remove('is-loading');
+        // Revert optimistic state if it was changed
+    });
+}
 </script>
 
 </body>
