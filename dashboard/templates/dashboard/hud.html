@@ -390,13 +390,13 @@
 
             <!-- Reminders bell -->
             <div class="menu-item dropdown dropdown-mobile-full">
-                <a href="#" data-bs-toggle="dropdown" data-bs-display="static" class="menu-link">
+                <a href="#" data-bs-toggle="dropdown" data-bs-display="static" class="menu-link" role="button" aria-expanded="false">
                     <div class="menu-icon"><i class="bi bi-bell nav-icon"></i></div>
                     {% if due_reminders_count > 0 %}
                     <div class="menu-badge bg-theme"></div>
                     {% endif %}
                 </a>
-                <div class="dropdown-menu dropdown-menu-end mt-1 w-300px fs-11px pt-1">
+                <div class="dropdown-menu dropdown-menu-end mt-1 w-300px fs-11px pt-1" data-bs-popper="static">
                     <h6 class="dropdown-header fs-10px mb-1">DUE REMINDERS</h6>
                     <div class="dropdown-divider mt-1"></div>
                     {% for r in due_reminders %}
@@ -1246,9 +1246,6 @@
 <!-- HUD theme core JS -->
 <script src="{% static 'js/vendor.min.js' %}"></script>
 <script src="{% static 'js/app.min.js' %}"></script>
-
-<!-- Bootstrap 5 bundle (for dropdowns) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 {{ calendar_dots_data|json_script:"calendar-dots-data" }}
  
