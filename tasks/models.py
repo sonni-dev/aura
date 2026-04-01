@@ -8,7 +8,7 @@ class Task(models.Model):
  
     status auto-transitions to STALLED via Celery if updated_at falls too far
     behind (see tasks/tasks.py). Mark complete via mark_complete() to ensure
-    completed_at is stamped correctly.
+    completed_at is stamped correctly and any linked Reminders are dismissed.
     """
 
     # ── Status ────────────────────────────────────────────────────────────
@@ -108,10 +108,27 @@ class Task(models.Model):
         return False
 
     def mark_complete(self):
+        """
+        Mark this task complete and dismiss all linked Reminders.
+ 
+        Uses a direct queryset .update() on reminders to avoid calling
+        Reminder.dismiss() (which would call mark_complete() again).
+        """
+        if self.is_complete:
+            # idempotent guard
+            return
+        
         self.is_complete = True
         self.status = self.STATUS_COMPLETE
         self.completed_at = timezone.now()
         self.save()
+
+        # Bulk-dismiss linked reminders without triggering back sync
+        self.reminders.filter(is_complete=False).update(
+            is_complete=True,
+            is_active=True,
+            completed_at=timezone.now(),
+        )
     
     def mark_stalled(self):
         """Called by Celery when updated_at hasn't moved in N days."""

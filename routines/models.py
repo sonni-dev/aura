@@ -166,6 +166,11 @@ class RoutineItem(models.Model):
     """
     A single action inside a Routine (e.g. 'Walk Doby', 'Brush teeth').
     Completions are tracked per-day via RoutineCompletion.
+
+    Reminders can be linked to a specific RoutineItem via Reminder.routine_item
+    FK for timely nudges that aren't tied to the whole routine.
+    toggle_today() dismisses those reminders automatically when the item is
+    marked complete for the day (but not when toggled back off).
     """
 
     routine = models.ForeignKey(Routine, on_delete=models.CASCADE, related_name='items')
@@ -188,7 +193,14 @@ class RoutineItem(models.Model):
         return RoutineCompletion.objects.filter(item=self, completed_on=d).exists()
     
     def toggle_today(self, for_date=None):
-        """Mark complete if not done; undo if already done. Returns new state."""
+        """
+        Mark complete if not done today; undo if already done. Returns new state.
+ 
+        When marking complete (created=True), bulk-dismisses any linked
+        Reminders for today. Does NOT re-activate reminders when toggled off
+        — use the admin re-activate action if needed.
+        """
+
         d = for_date or timezone.now().date()
         completion, created = RoutineCompletion.objects.get_or_create(
             item=self, completed_on=d
@@ -196,6 +208,14 @@ class RoutineItem(models.Model):
         if not created:
             completion.delete()
             return False
+        
+        # Dismiss reminders tied to this specific routine item
+        self.reminders.filter(is_complete=False).update(
+            is_complete=True,
+            is_active=False,
+            completed_at=timezone.now(),
+        )
+
         return True
     
     def item_streak(self, for_date=None):
