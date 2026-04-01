@@ -199,7 +199,7 @@
 
                 {# TODO: swap href to {% url 'tasks:list' %} once tasks pages exist #}
                 <div class="menu-item {% if request.resolver_match.app_name == 'tasks' %}active{% endif %}">
-                    <a href="{% url 'admin:tasks_task_changelist' %}" class="menu-link">
+                    <a href="{% url 'tasks:list' %}" class="menu-link">
                         <span class="menu-icon"><i class="bi bi-check2-square"></i></span>
                         <span class="menu-text">Tasks</span>
                         {% if tasks_todo_count > 0 %}
