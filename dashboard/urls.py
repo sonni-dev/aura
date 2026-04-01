@@ -16,4 +16,7 @@ urlpatterns = [
     path('api/tasks/upcoming/',       views.tasks_upcoming_api,     name='api-tasks-upcoming'),
     path('api/calendar/events/',      views.calendar_events_api,    name='api-calendar-events'),
     path('api/routines/item/<int:item_id>/toggle/',      views.routine_item_toggle_api,    name='api-routine-item-toggle'),
+
+    # Reminder Dismiss
+    path('api/reminders/<int:pk>/dismiss/',      views.reminder_dismiss_api,    name='api-reminder-dismiss'),
 ]

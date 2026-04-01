@@ -143,11 +143,13 @@ class HudView(TemplateView):
 
         # ── Reminders ─────────────────────────────────────────────────────
         due_reminders = Reminder.objects.filter(
-            is_active=True, next_run__lte=now
-        ).select_related('task', 'routine', 'goal', 'habit').order_by('next_run')[:5]
+            is_active=True, is_complete=False, next_run__lte=now
+        ).select_related('task', 'routine_item', 'routine', 'goal_item', 'goal', 'habit').order_by('next_run')[:5]
 
         upcoming_reminders = Reminder.objects.filter(
-            is_active=True, next_run__gt=now
+            is_active=True, is_complete=False, next_run__gt=now
+        ).select_related(
+            'task', 'goal_item', 'goal', 'routine_item', 'routine', 'habit'
         ).order_by('next_run')[:8]
 
 
@@ -384,7 +386,7 @@ def stats_api(request):
     return JsonResponse({
         'tasks_due_today':  Task.objects.filter(is_active=True, is_complete=False, due_date=today).count(),
         'tasks_overdue':    Task.objects.filter(is_active=True, is_complete=False, due_date__lt=today).count(),
-        'active_reminders': Reminder.objects.filter(is_active=True).count(),
+        'active_reminders': Reminder.objects.filter(is_active=True, is_complete=False).count(),
         'completion_rate':  round((completed_30/total_active)*100) if total_active else 0,
         'active_streaks':   sum(1 for r in routines_today if r.streak() > 0),
     })
@@ -444,7 +446,7 @@ def goals_api(request):
 def reminders_upcoming_api(request):
     limit = int(request.GET.get('limit', 8))
     data  = []
-    for r in Reminder.objects.filter(is_active=True).order_by('next_run')[:limit]:
+    for r in Reminder.objects.filter(is_active=True, is_complete=False).order_by('next_run')[:limit]:
         src = r.source
         data.append({
             'id': r.id, 'title': r.title, 'frequency': r.frequency, 'channel': r.channel,
@@ -471,6 +473,7 @@ def tasks_upcoming_api(request):
 def calendar_events_api(request):
     start = request.GET.get('start')
     end   = request.GET.get('end')
+    # Add filter is_complete=False to below query to remove stale dots from calendar...not sure if I want to yet so leaving myself this note.
     qs    = Reminder.objects.filter(is_active=True)
     if start:
         qs = qs.filter(next_run__gte=start)
@@ -520,3 +523,18 @@ def routine_item_toggle_api(request, item_id):
         'routine_done': done_count,
         'routine_total': total_count,
     })
+
+
+@require_POST
+def reminder_dismiss_api(request, pk):
+    """
+    Dismiss a reminder from the HUD via fetch() POST.
+    Calls Reminder.dismiss(sync_source=True) so linked source objects
+    (Task, GoalItem, RoutineItem) are also marked complete where applicable.
+    """
+    from reminders.models import Reminder as _Reminder
+    from django.shortcuts import get_object_or_404 as _get 
+    
+    reminder = _get(_Reminder, pk=pk)
+    reminder.dismiss(sync_source=True)
+    return JsonResponse({'dismissed': True, 'id': reminder.pk})
