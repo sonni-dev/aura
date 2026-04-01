@@ -281,7 +281,7 @@ class HudView(TemplateView):
             if len(_label) > 14:
                 _label = _label[:13] + '...'
             upcoming_soon.append({
-                'title': gi.title,
+                'title': gi.name,
                 'source': 'goal_item',
                 'source_label': _label,
                 'due_date': gi.due_date,
