@@ -22,4 +22,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('dashboard.urls')),
     path('routines/', include('routines.urls')),
+    path('tasks/', include('tasks.urls')),
+    path('goals/', include('goals.urls')),
+    path('habits/', include('habits.urls')),
+    path('reminders/', include('reminders.urls')),
 ]

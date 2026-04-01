@@ -1,0 +1,727 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Aura | Tasks{% endblock %}
+
+
+{% block content %}
+
+    <!-- Breadcrumb + Title ─────────────────────────────────────────────── -->
+    <div class="d-flex align-items-center mb-3">
+        <div>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard:hud' %}">DASHBOARD</a></li>
+                <li class="breadcrumb-item active">TASKS</li>
+            </ol>
+            <h1 class="page-header mb-0">Tasks</h1>
+        </div>
+        <div class="ms-auto">
+            <a href="#" class="btn btn-outline-theme btn-sm"
+               data-bs-toggle="modal" data-bs-target="#taskModal"
+               onclick="resetTaskModal()">
+                <i class="bi bi-plus-lg me-1"></i> Add Task
+            </a>
+        </div>
+    </div>
+
+
+    <!-- ═══════════════════ STAT PILLS ══════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold text-theme lh-1 mb-1">{{ total_active }}</div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Active</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="card text-center py-3 px-2 h-100{% if overdue_count %} border border-danger border-opacity-50{% endif %}">
+                <div class="fs-24px fw-bold lh-1 mb-1 {% if overdue_count %}text-danger{% else %}text-inverse text-opacity-25{% endif %}">
+                    {{ overdue_count }}
+                </div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Overdue</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold text-warning lh-1 mb-1">{{ due_today_count }}</div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Due Today</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold text-info lh-1 mb-1">{{ in_progress_count }}</div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">In Progress</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold lh-1 mb-1 {% if stalled_count %}text-warning{% else %}text-inverse text-opacity-25{% endif %}">
+                    {{ stalled_count }}
+                </div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Stalled</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold text-theme lh-1 mb-1">
+                    {{ completion_pct }}<span class="fs-14px">%</span>
+                </div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Complete</div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ═══════════════════ MAIN CARD ═══════════════════════════════════ -->
+    <div class="card">
+
+        <!-- Filter tabs -->
+        <ul class="nav nav-tabs nav-tabs-v2 px-4">
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link active px-2" data-filter="all">
+                    All
+                    <span class="badge bg-theme bg-opacity-20 text-theme ms-1 fs-10px px-2">{{ total_active }}</span>
+                </a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="overdue">
+                    Overdue
+                    {% if overdue_count %}<span class="badge bg-danger bg-opacity-20 text-danger ms-1 fs-10px px-2">{{ overdue_count }}</span>{% endif %}
+                </a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="due_today">
+                    Due Today
+                    {% if due_today_count %}<span class="badge bg-warning bg-opacity-20 text-warning ms-1 fs-10px px-2">{{ due_today_count }}</span>{% endif %}
+                </a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="in_progress">In Progress</a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="stalled">Stalled</a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="complete">Complete</a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="inactive">Inactive</a>
+            </li>
+        </ul>
+
+        <div class="p-4">
+
+            <!-- Search + filter dropdowns ──────────────────────────── -->
+            <div class="input-group mb-4">
+                <div class="flex-fill position-relative">
+                    <input type="text" id="taskSearch" class="form-control px-35px"
+                           placeholder="Search tasks...">
+                    <div class="input-group-text position-absolute top-0 bottom-0 bg-none border-0 start-0"
+                         style="z-index:1020;">
+                        <i class="fa fa-search opacity-5"></i>
+                    </div>
+                </div>
+
+                <button class="btn btn-outline-default dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown" id="priorityFilterBtn">
+                    <span class="d-none d-md-inline">Priority</span>
+                    <span class="d-inline d-md-none"><i class="bi bi-flag"></i></span>&nbsp;
+                </button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="#" data-priority-filter="">All Priorities</a>
+                    <a class="dropdown-item" href="#" data-priority-filter="high">
+                        <span class="text-danger me-1">●</span> High
+                    </a>
+                    <a class="dropdown-item" href="#" data-priority-filter="medium">
+                        <span class="text-warning me-1">●</span> Medium
+                    </a>
+                    <a class="dropdown-item" href="#" data-priority-filter="low">
+                        <span class="text-secondary me-1">●</span> Low
+                    </a>
+                </div>
+
+                <button class="btn btn-outline-default dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown" id="categoryFilterBtn">
+                    <span class="d-none d-md-inline">Category</span>
+                    <span class="d-inline d-md-none"><i class="bi bi-tag"></i></span>&nbsp;
+                </button>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <a class="dropdown-item" href="#" data-category-filter="">All Categories</a>
+                    <div class="dropdown-divider"></div>
+                    {% for code, label in category_choices %}
+                    <a class="dropdown-item" href="#" data-category-filter="{{ code }}">{{ label }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Table ──────────────────────────────────────────────── -->
+            <div class="table-responsive">
+                <table class="table table-hover text-nowrap" id="taskTable">
+                    <thead>
+                        <tr>
+                            <th class="border-top-0 pt-0 pb-2" style="width:38%;">Task</th>
+                            <th class="border-top-0 pt-0 pb-2">Status</th>
+                            <th class="border-top-0 pt-0 pb-2">Priority</th>
+                            <th class="border-top-0 pt-0 pb-2">Category</th>
+                            <th class="border-top-0 pt-0 pb-2">Energy</th>
+                            <th class="border-top-0 pt-0 pb-2">Due</th>
+                            <th class="border-top-0 pt-0 pb-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        {% for task in tasks %}
+                        <tr class="task-row align-middle"
+                            data-status="{{ task.status }}"
+                            data-priority="{{ task.priority }}"
+                            data-category="{{ task.category }}"
+                            data-active="true"
+                            data-overdue="{% if task.is_overdue %}true{% else %}false{% endif %}"
+                            data-due-today="{% if task.due_date == today and not task.is_complete %}true{% else %}false{% endif %}"
+                            data-name="{{ task.name|lower }}">
+
+                            <!-- Name + description ──────────────── -->
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3 flex-shrink-0">
+                                        <span class="task-check-circle"
+                                              data-task-id="{{ task.pk }}"
+                                              style="cursor:pointer;"
+                                              title="{% if task.is_complete %}Completed {{ task.completed_at|date:'M j' }} — click to undo{% else %}Mark complete{% endif %}">
+                                            {% if task.is_complete %}
+                                            <i class="bi bi-check-circle-fill text-theme fs-16px"></i>
+                                            {% else %}
+                                            <i class="bi bi-circle text-inverse text-opacity-25 fs-16px"></i>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="flex-fill overflow-hidden">
+                                        <div class="fw-semibold text-inverse text-truncate{% if task.is_complete %} text-opacity-40 text-decoration-line-through{% endif %}"
+                                             style="max-width:340px;">
+                                            {{ task.name }}
+                                        </div>
+                                        {% if task.description %}
+                                        <div class="fs-12px text-inverse text-opacity-40 text-truncate"
+                                             style="max-width:340px;">
+                                            {{ task.description }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Status ──────────────────────────── -->
+                            <td class="align-middle">
+                                {% if task.status == 'todo' %}
+                                <span class="badge border border-secondary text-secondary px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
+                                    <i class="fa fa-circle fs-9px fa-fw me-5px"></i> To Do
+                                </span>
+                                {% elif task.status == 'in_progress' %}
+                                <span class="badge border border-info text-info px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
+                                    <i class="fa fa-circle fs-9px fa-fw me-5px"></i> In Progress
+                                </span>
+                                {% elif task.status == 'stalled' %}
+                                <span class="badge border border-warning text-warning px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
+                                    <i class="bi bi-pause-circle fs-9px me-5px"></i> Stalled
+                                </span>
+                                {% elif task.status == 'complete' %}
+                                <span class="badge border border-theme text-theme px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
+                                    <i class="fa fa-circle fs-9px fa-fw me-5px"></i> Complete
+                                </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Priority ────────────────────────── -->
+                            <td class="align-middle">
+                                {% if task.priority == 'high' %}
+                                <span class="text-danger fw-600 fs-12px">
+                                    <i class="bi bi-chevron-double-up me-1"></i>High
+                                </span>
+                                {% elif task.priority == 'medium' %}
+                                <span class="text-warning fw-600 fs-12px">
+                                    <i class="bi bi-chevron-up me-1"></i>Medium
+                                </span>
+                                {% else %}
+                                <span class="text-inverse text-opacity-40 fw-600 fs-12px">
+                                    <i class="bi bi-chevron-down me-1"></i>Low
+                                </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Category ────────────────────────── -->
+                            <td class="align-middle">
+                                {% if task.category %}
+                                <span class="badge bg-inverse bg-opacity-15 text-inverse text-opacity-60 px-2 py-1 rounded fs-11px">
+                                    {{ task.get_category_display }}
+                                </span>
+                                {% else %}
+                                <span class="text-inverse text-opacity-25 fs-12px">—</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Energy ──────────────────────────── -->
+                            <td class="align-middle">
+                                {% if task.energy_type == 'mental' %}
+                                <span class="text-info fs-12px"><i class="bi bi-lightbulb me-1"></i>Mental</span>
+                                {% elif task.energy_type == 'physical' %}
+                                <span class="text-theme fs-12px"><i class="bi bi-lightning-charge me-1"></i>Physical</span>
+                                {% elif task.energy_type == 'social' %}
+                                <span class="text-pink fs-12px"><i class="bi bi-people me-1"></i>Social</span>
+                                {% else %}
+                                <span class="text-inverse text-opacity-25 fs-12px">—</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Due date ────────────────────────── -->
+                            <td class="align-middle">
+                                {% if task.due_date %}
+                                    {% if task.is_overdue %}
+                                    <span class="text-danger fw-600 fs-12px">
+                                        <i class="bi bi-exclamation-circle me-1"></i>{{ task.due_date|date:"M j" }}
+                                    </span>
+                                    {% elif task.due_date == today %}
+                                    <span class="text-warning fw-600 fs-12px">
+                                        <i class="bi bi-calendar-check me-1"></i>Today
+                                    </span>
+                                    {% else %}
+                                    <span class="text-inverse text-opacity-60 fs-12px">
+                                        {{ task.due_date|date:"M j, Y" }}
+                                    </span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="text-inverse text-opacity-25 fs-12px">—</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Edit ────────────────────────────── -->
+                            <td class="align-middle text-end">
+                                <a href="#"
+                                   class="text-inverse text-opacity-40 text-decoration-none"
+                                   title="Edit task"
+                                   data-bs-toggle="modal"
+                                   data-bs-target="#taskModal"
+                                   onclick="openEditModal(
+                                       {{ task.pk }},
+                                       '{{ task.name|escapejs }}',
+                                       '{{ task.description|escapejs }}',
+                                       '{{ task.status }}',
+                                       '{{ task.priority }}',
+                                       '{{ task.category }}',
+                                       '{{ task.energy_type }}',
+                                       '{{ task.where_task }}',
+                                       '{% if task.due_date %}{{ task.due_date|date:"Y-m-d" }}{% endif %}'
+                                   ); return false;">
+                                    <i class="bi bi-pencil fs-13px"></i>
+                                </a>
+                            </td>
+
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-inverse text-opacity-40 py-5">
+                                <i class="bi bi-check2-all fs-28px d-block mb-2 text-theme text-opacity-30"></i>
+                                No active tasks — add one above.
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        <!-- ── Inactive rows (hidden by default) ─── -->
+                        {% for task in inactive %}
+                        <tr class="task-row align-middle"
+                            data-status="{{ task.status }}"
+                            data-priority="{{ task.priority }}"
+                            data-category="{{ task.category }}"
+                            data-active="false"
+                            data-overdue="false"
+                            data-due-today="false"
+                            data-name="{{ task.name|lower }}">
+
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3 flex-shrink-0">
+                                        <i class="bi bi-archive text-inverse text-opacity-20 fs-16px"></i>
+                                    </div>
+                                    <div class="fw-semibold text-inverse text-opacity-25 text-decoration-line-through text-truncate"
+                                         style="max-width:340px;">
+                                        {{ task.name }}
+                                    </div>
+                                </div>
+                            </td>
+                            <td colspan="4">
+                                <span class="text-inverse text-opacity-25 fs-12px">Archived</span>
+                            </td>
+                            <td></td>
+                            <td class="align-middle text-end">
+                                <a href="#"
+                                   class="text-inverse text-opacity-25 text-decoration-none"
+                                   title="Edit task"
+                                   data-bs-toggle="modal"
+                                   data-bs-target="#taskModal"
+                                   onclick="openEditModal(
+                                       {{ task.pk }},
+                                       '{{ task.name|escapejs }}',
+                                       '{{ task.description|escapejs }}',
+                                       '{{ task.status }}',
+                                       '{{ task.priority }}',
+                                       '{{ task.category }}',
+                                       '{{ task.energy_type }}',
+                                       '{{ task.where_task }}',
+                                       '{% if task.due_date %}{{ task.due_date|date:"Y-m-d" }}{% endif %}'
+                                   ); return false;">
+                                    <i class="bi bi-pencil fs-13px"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                    </tbody>
+                </table>
+            </div>
+            <!-- END table -->
+
+        </div>
+    </div>
+    <!-- END MAIN CARD -->
+
+
+    <!-- ═══════════════════ ADD / EDIT TASK MODAL ═══════════════════════ -->
+    <div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border border-inverse border-opacity-15"
+                 style="background:var(--bs-body-bg);">
+
+                <div class="modal-header border-bottom border-inverse border-opacity-10">
+                    <h5 class="modal-title text-inverse fs-14px text-uppercase fw-bold"
+                        id="taskModalLabel">Add Task</h5>
+                    <button type="button" class="btn-close btn-close-white opacity-50"
+                            data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" id="editTaskId" value="">
+
+                    <!-- Row 1: Name -->
+                    <div class="mb-3">
+                        <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                            Name <span class="text-theme">*</span>
+                        </label>
+                        <input type="text" id="taskName" class="form-control"
+                               placeholder="What needs to be done?">
+                    </div>
+
+                    <!-- Row 2: Description -->
+                    <div class="mb-3">
+                        <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                            Description
+                        </label>
+                        <textarea id="taskDescription" class="form-control" rows="2"
+                                  placeholder="Any notes or context…"></textarea>
+                    </div>
+
+                    <!-- Row 3: Status / Priority / Due date -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-4">
+                            <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                                Status
+                            </label>
+                            <select id="taskStatus" class="form-select">
+                                {% for code, label in status_choices %}
+                                <option value="{{ code }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                                Priority
+                            </label>
+                            <select id="taskPriority" class="form-select">
+                                {% for code, label in priority_choices %}
+                                <option value="{{ code }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                                Due Date
+                            </label>
+                            <input type="date" id="taskDueDate" class="form-control">
+                        </div>
+                    </div>
+
+                    <!-- Row 4: Category / Energy / Where -->
+                    <div class="row g-3 mb-0">
+                        <div class="col-sm-4">
+                            <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                                Category
+                            </label>
+                            <select id="taskCategory" class="form-select">
+                                <option value="">— None —</option>
+                                {% for code, label in category_choices %}
+                                <option value="{{ code }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                                Energy Type
+                            </label>
+                            <select id="taskEnergy" class="form-select">
+                                <option value="">— None —</option>
+                                {% for code, label in energy_choices %}
+                                <option value="{{ code }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                                Where
+                            </label>
+                            <select id="taskWhere" class="form-select">
+                                <option value="">— None —</option>
+                                {% for code, label in where_choices %}
+                                <option value="{{ code }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="taskSaveError" class="alert alert-danger d-none py-2 fs-13px mt-3 mb-0"></div>
+                </div>
+
+                <div class="modal-footer border-top border-inverse border-opacity-10">
+                    <button type="button" class="btn btn-outline-default btn-sm"
+                            data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-outline-theme btn-sm"
+                            onclick="saveTask()">
+                        <i class="bi bi-check2 me-1"></i> Save Task
+                    </button>
+                </div>
+
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- END modal -->
+
+{% endblock %}
+
+
+{% block page_js %}
+<script>
+(function () {
+    'use strict';
+
+    var CSRF     = document.querySelector('meta[name="csrf-token"]').content;
+    var SAVE_URL = "{% url 'tasks:save' %}";
+
+    // ── Filter state ─────────────────────────────────────────────────────
+    var activeFilter   = 'all';
+    var priorityFilter = '';
+    var categoryFilter = '';
+    var searchTerm     = '';
+
+    var rows     = document.querySelectorAll('.task-row');
+    var searchEl = document.getElementById('taskSearch');
+    var tabs     = document.querySelectorAll('[data-filter]');
+
+    function rowMatchesTab(row) {
+        if (activeFilter === 'inactive') return row.dataset.active === 'false';
+        if (row.dataset.active === 'false') return false;
+        switch (activeFilter) {
+            case 'all':         return true;
+            case 'overdue':     return row.dataset.overdue   === 'true';
+            case 'due_today':   return row.dataset.dueToday  === 'true';
+            case 'in_progress': return row.dataset.status    === 'in_progress';
+            case 'stalled':     return row.dataset.status    === 'stalled';
+            case 'complete':    return row.dataset.status    === 'complete';
+            default:            return true;
+        }
+    }
+
+    function applyFilters() {
+        rows.forEach(function (row) {
+            var tabOk    = rowMatchesTab(row);
+            var priOk    = !priorityFilter || row.dataset.priority === priorityFilter;
+            var catOk    = !categoryFilter || row.dataset.category === categoryFilter;
+            var searchOk = !searchTerm     || (row.dataset.name || '').includes(searchTerm);
+            row.classList.toggle('d-none', !(tabOk && priOk && catOk && searchOk));
+        });
+    }
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function (e) {
+            e.preventDefault();
+            tabs.forEach(function (t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            activeFilter = tab.dataset.filter;
+            applyFilters();
+        });
+    });
+
+    searchEl.addEventListener('input', function () {
+        searchTerm = searchEl.value.toLowerCase().trim();
+        applyFilters();
+    });
+
+    document.querySelectorAll('[data-priority-filter]').forEach(function (el) {
+        el.addEventListener('click', function (e) {
+            e.preventDefault();
+            priorityFilter = el.dataset.priorityFilter;
+            document.getElementById('priorityFilterBtn').querySelector('.d-none').textContent =
+                priorityFilter ? el.textContent.trim() : 'Priority';
+            applyFilters();
+        });
+    });
+
+    document.querySelectorAll('[data-category-filter]').forEach(function (el) {
+        el.addEventListener('click', function (e) {
+            e.preventDefault();
+            categoryFilter = el.dataset.categoryFilter;
+            document.getElementById('categoryFilterBtn').querySelector('.d-none').textContent =
+                categoryFilter ? el.textContent.trim() : 'Category';
+            applyFilters();
+        });
+    });
+
+    // ── Completion toggle ────────────────────────────────────────────────
+    document.querySelectorAll('.task-check-circle').forEach(function (circle) {
+        circle.addEventListener('click', function () {
+            var taskId = this.dataset.taskId;
+            var icon   = this.querySelector('i');
+            var isDone = icon.classList.contains('bi-check-circle-fill');
+
+            // Optimistic update
+            icon.className = isDone
+                ? 'bi bi-circle text-inverse text-opacity-25 fs-16px'
+                : 'bi bi-check-circle-fill text-theme fs-16px';
+
+            var row    = this.closest('tr');
+            var nameEl = row.querySelector('.fw-semibold');
+            nameEl.classList.toggle('text-opacity-40',          !isDone);
+            nameEl.classList.toggle('text-decoration-line-through', !isDone);
+
+            fetch('/tasks/' + taskId + '/toggle/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF },
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                row.dataset.status = data.status;
+                if (data.status === 'complete') {
+                    row.dataset.status   = 'complete';
+                } else {
+                    row.dataset.status   = data.status;
+                }
+            })
+            .catch(function () {
+                // Revert on failure
+                icon.className = isDone
+                    ? 'bi bi-check-circle-fill text-theme fs-16px'
+                    : 'bi bi-circle text-inverse text-opacity-25 fs-16px';
+            });
+        });
+    });
+
+    // ── Initial render: apply default filter ────────────────────────────
+    applyFilters();
+
+}());
+
+
+/* ── Modal helpers ────────────────────────────────────────────────────── */
+
+function resetTaskModal() {
+    document.getElementById('taskModalLabel').textContent = 'Add Task';
+    document.getElementById('editTaskId').value      = '';
+    document.getElementById('taskName').value        = '';
+    document.getElementById('taskDescription').value = '';
+    document.getElementById('taskStatus').value      = 'todo';
+    document.getElementById('taskPriority').value    = 'medium';
+    document.getElementById('taskCategory').value    = '';
+    document.getElementById('taskEnergy').value      = '';
+    document.getElementById('taskWhere').value       = '';
+    document.getElementById('taskDueDate').value     = '';
+    document.getElementById('taskSaveError').classList.add('d-none');
+}
+
+function openEditModal(id, name, description, status, priority, category, energy, where, dueDate) {
+    document.getElementById('taskModalLabel').textContent = 'Edit Task';
+    document.getElementById('editTaskId').value      = id;
+    document.getElementById('taskName').value        = name;
+    document.getElementById('taskDescription').value = description;
+    document.getElementById('taskStatus').value      = status;
+    document.getElementById('taskPriority').value    = priority;
+    document.getElementById('taskCategory').value    = category;
+    document.getElementById('taskEnergy').value      = energy;
+    document.getElementById('taskWhere').value       = where;
+    document.getElementById('taskDueDate').value     = dueDate;
+    document.getElementById('taskSaveError').classList.add('d-none');
+}
+
+function saveTask() {
+    var errEl = document.getElementById('taskSaveError');
+    errEl.classList.add('d-none');
+
+    var name = document.getElementById('taskName').value.trim();
+    if (!name) {
+        errEl.textContent = 'Name is required.';
+        errEl.classList.remove('d-none');
+        return;
+    }
+
+    var payload = {
+        task_id:     document.getElementById('editTaskId').value || null,
+        name:        name,
+        description: document.getElementById('taskDescription').value.trim(),
+        status:      document.getElementById('taskStatus').value,
+        priority:    document.getElementById('taskPriority').value,
+        category:    document.getElementById('taskCategory').value,
+        energy_type: document.getElementById('taskEnergy').value,
+        where_task:  document.getElementById('taskWhere').value,
+        due_date:    document.getElementById('taskDueDate').value,
+    };
+
+    fetch("{% url 'tasks:save' %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.error) {
+            errEl.textContent = data.error;
+            errEl.classList.remove('d-none');
+            return;
+        }
+        window.location.reload();
+    })
+    .catch(function () {
+        errEl.textContent = 'Something went wrong. Please try again.';
+        errEl.classList.remove('d-none');
+    });
+}
+
+// Reset modal when opened fresh via the Add Task button
+document.getElementById('taskModal').addEventListener('show.bs.modal', function () {
+    if (!document.getElementById('editTaskId').value) {
+        resetTaskModal();
+    }
+});
+</script>
+{% endblock %}
