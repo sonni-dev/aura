@@ -1,361 +1,229 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
-<head>
-    <meta charset="utf-8">
-    <title>Aura | Routines</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token }}">
 
-     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-    
-    <link href="{% static 'css/vendor.min.css' %}" rel="stylesheet">
-    <link href="{% static 'css/app.min.css' %}" rel="stylesheet">
+{% block title %}Aura | Routines{% endblock %}
 
-    <!-- Google Fonts: Rajdhani (display) + JetBrains Mono (mono) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-</head>
-<body>
-<div id="app" class="app">
 
-    <!-- ═══════════════════════════ HEADER ═══════════════════════════════ -->
-    <div id="header" class="app-header">
-        <div class="desktop-toggler">
-            <button type="button" class="menu-toggler"
-                    data-toggle-class="app-sidebar-collapsed"
-                    data-dismiss-class="app-sidebar-toggled"
-                    data-toggle-target=".app">
-                <span class="bar"></span><span class="bar"></span><span class="bar"></span>
-            </button>
+{% block content %}
+
+    <!-- Breadcrumb + Title ─────────────────────────────────────────────── -->
+    <div class="d-flex align-items-center mb-3">
+        <div>
+            <ul class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard:hud' %}">DASHBOARD</a></li>
+                <li class="breadcrumb-item active">ROUTINES</li>
+            </ul>
+            <h1 class="page-header mb-0">Routines</h1>
         </div>
-        <div class="mobile-toggler">
-            <button type="button" class="menu-toggler"
-                    data-toggle-class="app-sidebar-mobile-toggled"
-                    data-toggle-target=".app">
-                <span class="bar"></span><span class="bar"></span><span class="bar"></span>
-            </button>
-        </div>
-        <div class="brand">
-            <a href="{% url 'dashboard:hud' %}" class="brand-logo">
-                <span class="brand-img">
-                    <span class="brand-img-text text-theme">A</span>
-                </span>
-                <span class="brand-text">AURA</span>
+        <div class="ms-auto">
+            <a href="{% url 'admin:routines_routine_add' %}" class="btn btn-outline-warning">
+                <i class="bi bi-plus-circle me-1"></i> Add Routine
             </a>
         </div>
     </div>
 
-    <!-- ═══════════════════════════ SIDEBAR ══════════════════════════════ -->
-    <div id="sidebar" class="app-sidebar">
-        <div class="app-sidebar-content" data-scrollbar="true" data-height="100%">
-            <div class="menu">
-                <div class="menu-header">Navigation</div>
-
-                <div class="menu-item">
-                    <a href="{% url 'dashboard:hud' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-cpu"></i></span>
-                        <span class="menu-text">Dashboard</span>
-                    </a>
-                </div>
-
-                <div class="menu-item">
-                    <a href="{% url 'admin:tasks_task_changelist' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-check2-square"></i></span>
-                        <span class="menu-text">Tasks</span>
-                    </a>
-                </div>
-
-                <div class="menu-item active">
-                    <a href="{% url 'routines:list' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-arrow-repeat"></i></span>
-                        <span class="menu-text">Routines</span>
-                    </a>
-                </div>
-
-                <div class="menu-item">
-                    <a href="{% url 'admin:goals_goal_changelist' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-bullseye"></i></span>
-                        <span class="menu-text">Goals</span>
-                    </a>
-                </div>
-
-                <div class="menu-item">
-                    <a href="{% url 'admin:habits_habit_changelist' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-activity"></i></span>
-                        <span class="menu-text">Habits</span>
-                    </a>
-                </div>
-
-                <div class="menu-item">
-                    <a href="{% url 'admin:reminders_reminder_changelist' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-bell"></i></span>
-                        <span class="menu-text">Reminders</span>
-                    </a>
-                </div>
-
-                <div class="menu-divider"></div>
-
-                <div class="menu-item">
-                    <a href="{% url 'admin:index' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-gear"></i></span>
-                        <span class="menu-text">Admin</span>
-                    </a>
-                </div>
-            </div>
+    <!-- Stats bar ──────────────────────────────────────────────────────── -->
+    <div class="mb-md-4 mb-3 d-md-flex gap-4 fw-semibold">
+        <div class="mt-md-0 mt-2">
+            <span class="text-inverse text-opacity-50 fs-12px text-uppercase me-2">Active</span>
+            <span class="text-inverse">{{ active_count }}</span>
         </div>
+        <div class="mt-md-0 mt-2">
+            <span class="text-inverse text-opacity-50 fs-12px text-uppercase me-2">Scheduled Today</span>
+            <span class="text-inverse">{{ today_count }}</span>
+        </div>
+        <div class="mt-md-0 mt-2">
+            <span class="text-inverse text-opacity-50 fs-12px text-uppercase me-2">Items Done Today</span>
+            <span class="text-warning">{{ today_overall_done }}/{{ today_overall_total }}</span>
+        </div>
+        {% if max_streak > 0 %}
+        <div class="mt-md-0 mt-2">
+            <span class="text-inverse text-opacity-50 fs-12px text-uppercase me-2">Best Streak</span>
+            <span class="text-warning">🔥 {{ max_streak }}d</span>
+        </div>
+        {% endif %}
     </div>
 
-    <button class="app-sidebar-mobile-backdrop"
-            data-toggle-target=".app"
-            data-toggle-class="app-sidebar-mobile-toggled"></button>
+    <!-- Main card ──────────────────────────────────────────────────────── -->
+    <div class="card">
 
-    <!-- ════════════════════════════ CONTENT ═════════════════════════════ -->
-    <div id="content" class="app-content">
-
-        <!-- Breadcrumb + Title ─────────────────────────────────────────── -->
-        <div class="d-flex align-items-center mb-3">
-            <div>
-                <ul class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard:hud' %}">DASHBOARD</a></li>
-                    <li class="breadcrumb-item active">ROUTINES</li>
-                </ul>
-                <h1 class="page-header mb-0">Routines</h1>
-            </div>
-            <div class="ms-auto">
-                <a href="{% url 'admin:routines_routine_add' %}" class="btn btn-outline-warning">
-                    <i class="bi bi-plus-circle me-1"></i> Add Routine
+        <!-- Filter tabs -->
+        <ul class="nav nav-tabs nav-tabs-v2 px-4">
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link active px-2" data-filter="all">
+                    All
+                    <span class="badge bg-warning bg-opacity-20 text-warning ms-1 fs-10px px-2">{{ total_count }}</span>
                 </a>
-            </div>
-        </div>
+            </li>
+            <li class="nav-item me-3"><a href="#" class="nav-link px-2" data-filter="morning">Morning</a></li>
+            <li class="nav-item me-3"><a href="#" class="nav-link px-2" data-filter="afternoon">Afternoon</a></li>
+            <li class="nav-item me-3"><a href="#" class="nav-link px-2" data-filter="evening">Evening</a></li>
+            <li class="nav-item me-3"><a href="#" class="nav-link px-2" data-filter="inactive">Inactive</a></li>
+        </ul>
 
-        <!-- Stats bar ──────────────────────────────────────────────────── -->
-        <div class="mb-md-4 mb-3 d-md-flex gap-4 fw-semibold">
-            <div class="mt-md-0 mt-2">
-                <span class="text-inverse text-opacity-50 fs-12px text-uppercase me-2">Active</span>
-                <span class="text-inverse">{{ active_count }}</span>
-            </div>
-            <div class="mt-md-0 mt-2">
-                <span class="text-inverse text-opacity-50 fs-12px text-uppercase me-2">Scheduled Today</span>
-                <span class="text-inverse">{{ today_count }}</span>
-            </div>
-            <div class="mt-md-0 mt-2">
-                <span class="text-inverse text-opacity-50 fs-12px text-uppercase me-2">Items Done Today</span>
-                <span class="text-warning">{{ today_overall_done }}/{{ today_overall_total }}</span>
-            </div>
-            {% if max_streak > 0 %}
-            <div class="mt-md-0 mt-2">
-                <span class="text-inverse text-opacity-50 fs-12px text-uppercase me-2">Best Streak</span>
-                <span class="text-warning">🔥 {{ max_streak }}d</span>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Main card ──────────────────────────────────────────────────── -->
-        <div class="card">
-
-            <!-- Filter tabs -->
-            <ul class="nav nav-tabs nav-tabs-v2 px-4">
-                <li class="nav-item me-3">
-                    <a href="#" class="nav-link active px-2" data-filter="all">
-                        All
-                        <span class="badge bg-warning bg-opacity-20 text-warning ms-1 fs-10px px-2">{{ total_count }}</span>
-                    </a>
-                </li>
-                <li class="nav-item me-3">
-                    <a href="#" class="nav-link px-2" data-filter="morning">Morning</a>
-                </li>
-                <li class="nav-item me-3">
-                    <a href="#" class="nav-link px-2" data-filter="afternoon">Afternoon</a>
-                </li>
-                <li class="nav-item me-3">
-                    <a href="#" class="nav-link px-2" data-filter="evening">Evening</a>
-                </li>
-                <li class="nav-item me-3">
-                    <a href="#" class="nav-link px-2" data-filter="inactive">Inactive</a>
-                </li>
-            </ul>
-
-            <div class="p-4">
-                <!-- Search -->
-                <div class="input-group mb-4">
-                    <div class="flex-fill position-relative">
-                        <input type="text" id="routineSearch" class="form-control px-35px"
-                               placeholder="Search routines...">
-                        <div class="input-group-text position-absolute top-0 bottom-0 bg-none border-0 start-0"
-                             style="z-index:1020;">
-                            <i class="fa fa-search opacity-5"></i>
-                        </div>
+        <div class="p-4">
+            <!-- Search -->
+            <div class="input-group mb-4">
+                <div class="flex-fill position-relative">
+                    <input type="text" id="routineSearch" class="form-control px-35px"
+                           placeholder="Search routines...">
+                    <div class="input-group-text position-absolute top-0 bottom-0 bg-none border-0 start-0"
+                         style="z-index:1020;">
+                        <i class="fa fa-search opacity-5"></i>
                     </div>
                 </div>
+            </div>
 
-                <!-- Table -->
-                <div class="table-responsive">
-                    <table class="table table-hover text-nowrap" id="routineTable">
-                        <thead>
-                            <tr>
-                                <th class="border-top-0 pt-0 pb-2">Routine</th>
-                                <th class="border-top-0 pt-0 pb-2">Slot</th>
-                                <th class="border-top-0 pt-0 pb-2">Schedule</th>
-                                <th class="border-top-0 pt-0 pb-2 text-center">Items</th>
-                                <th class="border-top-0 pt-0 pb-2" style="min-width:180px;">Today's Progress</th>
-                                <th class="border-top-0 pt-0 pb-2">Streak</th>
-                                <th class="border-top-0 pt-0 pb-2">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for rd in routines_data %}
-                            <tr class="routine-row"
-                                data-slot="{{ rd.routine.slot }}"
-                                data-active="{{ rd.routine.is_active|yesno:'true,false' }}"
-                                data-name="{{ rd.routine.name|lower }}">
+            <!-- Table -->
+            <div class="table-responsive">
+                <table class="table table-hover text-nowrap" id="routineTable">
+                    <thead>
+                        <tr>
+                            <th class="border-top-0 pt-0 pb-2">Routine</th>
+                            <th class="border-top-0 pt-0 pb-2">Slot</th>
+                            <th class="border-top-0 pt-0 pb-2">Schedule</th>
+                            <th class="border-top-0 pt-0 pb-2 text-center">Items</th>
+                            <th class="border-top-0 pt-0 pb-2" style="min-width:180px;">Today's Progress</th>
+                            <th class="border-top-0 pt-0 pb-2">Streak</th>
+                            <th class="border-top-0 pt-0 pb-2">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rd in routines_data %}
+                        <tr class="routine-row"
+                            data-slot="{{ rd.routine.slot }}"
+                            data-active="{{ rd.routine.is_active|yesno:'true,false' }}"
+                            data-name="{{ rd.routine.name|lower }}">
 
-                                <!-- Name -->
-                                <td class="align-middle">
-                                    <a href="{% url 'routines:detail' rd.routine.pk %}"
-                                       class="text-inverse fw-semibold text-decoration-none">
-                                        {{ rd.routine.name }}
-                                    </a>
-                                </td>
+                            <td class="align-middle">
+                                <a href="{% url 'routines:detail' rd.routine.pk %}"
+                                   class="text-inverse fw-semibold text-decoration-none">
+                                    {{ rd.routine.name }}
+                                </a>
+                            </td>
 
-                                <!-- Slot badge -->
-                                <td class="align-middle">
-                                    {% if rd.routine.slot == 'morning' %}
-                                    <span class="badge border border-warning text-warning px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
-                                        <i class="bi bi-sunrise fs-9px me-5px"></i> Morning
-                                    </span>
-                                    {% elif rd.routine.slot == 'afternoon' %}
-                                    <span class="badge border border-info text-info px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
-                                        <i class="bi bi-sun fs-9px me-5px"></i> Afternoon
-                                    </span>
-                                    {% else %}
-                                    <span class="badge border border-primary text-primary px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
-                                        <i class="bi bi-moon fs-9px me-5px"></i> Evening
-                                    </span>
-                                    {% endif %}
-                                </td>
+                            <td class="align-middle">
+                                {% if rd.routine.slot == 'morning' %}
+                                <span class="badge border border-warning text-warning px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
+                                    <i class="bi bi-sunrise fs-9px me-5px"></i> Morning
+                                </span>
+                                {% elif rd.routine.slot == 'afternoon' %}
+                                <span class="badge border border-info text-info px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
+                                    <i class="bi bi-sun fs-9px me-5px"></i> Afternoon
+                                </span>
+                                {% else %}
+                                <span class="badge border border-primary text-primary px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
+                                    <i class="bi bi-moon fs-9px me-5px"></i> Evening
+                                </span>
+                                {% endif %}
+                            </td>
 
-                                <!-- Day labels -->
-                                <td class="align-middle">
-                                    <span class="text-inverse text-opacity-50 fs-12px font-monospace">
-                                        {{ rd.routine.day_labels }}
-                                    </span>
-                                </td>
+                            <td class="align-middle">
+                                <span class="text-inverse text-opacity-50 fs-12px font-monospace">
+                                    {{ rd.routine.day_labels }}
+                                </span>
+                            </td>
 
-                                <!-- Item count -->
-                                <td class="align-middle text-center text-inverse font-monospace fs-13px">
-                                    {{ rd.item_count }}
-                                </td>
+                            <td class="align-middle text-center text-inverse font-monospace fs-13px">
+                                {{ rd.item_count }}
+                            </td>
 
-                                <!-- Today's progress -->
-                                <td class="align-middle">
-                                    {% if rd.runs_today %}
-                                        {% if rd.total > 0 %}
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="progress flex-1" style="height:5px;">
-                                                <div class="progress-bar bg-warning"
-                                                     style="width:{{ rd.pct }}%;"></div>
-                                            </div>
-                                            <span class="fs-11px text-inverse text-opacity-50 text-nowrap font-monospace">
-                                                {{ rd.done }}/{{ rd.total }}
-                                            </span>
+                            <td class="align-middle">
+                                {% if rd.runs_today %}
+                                    {% if rd.total > 0 %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-1" style="height:5px;">
+                                            <div class="progress-bar bg-warning"
+                                                 style="width:{{ rd.pct }}%;"></div>
                                         </div>
-                                        {% else %}
-                                        <span class="text-inverse text-opacity-25 fs-11px">No items</span>
-                                        {% endif %}
+                                        <span class="fs-11px text-inverse text-opacity-50 text-nowrap font-monospace">
+                                            {{ rd.done }}/{{ rd.total }}
+                                        </span>
+                                    </div>
                                     {% else %}
-                                    <span class="text-inverse text-opacity-25 fs-11px">Not today</span>
+                                    <span class="text-inverse text-opacity-25 fs-11px">No items</span>
                                     {% endif %}
-                                </td>
+                                {% else %}
+                                <span class="text-inverse text-opacity-25 fs-11px">Not today</span>
+                                {% endif %}
+                            </td>
 
-                                <!-- Streak -->
-                                <td class="align-middle font-monospace">
-                                    {% if rd.streak > 0 %}
-                                    <span class="text-warning fw-bold fs-13px">🔥 {{ rd.streak }}d</span>
-                                    {% else %}
-                                    <span class="text-inverse text-opacity-25">—</span>
-                                    {% endif %}
-                                </td>
+                            <td class="align-middle font-monospace">
+                                {% if rd.streak > 0 %}
+                                <span class="text-warning fw-bold fs-13px">🔥 {{ rd.streak }}d</span>
+                                {% else %}
+                                <span class="text-inverse text-opacity-25">—</span>
+                                {% endif %}
+                            </td>
 
-                                <!-- Status -->
-                                <td class="align-middle">
-                                    {% if rd.routine.is_active %}
-                                    <span class="badge border border-success text-success px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
-                                        <i class="fa fa-circle fs-9px fa-fw me-5px"></i> Active
-                                    </span>
-                                    {% else %}
-                                    <span class="badge border border-secondary text-secondary px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
-                                        <i class="fa fa-circle fs-9px fa-fw me-5px"></i> Inactive
-                                    </span>
-                                    {% endif %}
-                                </td>
+                            <td class="align-middle">
+                                {% if rd.routine.is_active %}
+                                <span class="badge border border-success text-success px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
+                                    <i class="fa fa-circle fs-9px fa-fw me-5px"></i> Active
+                                </span>
+                                {% else %}
+                                <span class="badge border border-secondary text-secondary px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
+                                    <i class="fa fa-circle fs-9px fa-fw me-5px"></i> Inactive
+                                </span>
+                                {% endif %}
+                            </td>
 
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="7" class="text-center py-5 text-inverse text-opacity-50">
-                                    No routines yet.
-                                    <a href="{% url 'admin:routines_routine_add' %}"
-                                       class="text-warning text-decoration-none">Add your first routine →</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-inverse text-opacity-50">
+                                No routines yet.
+                                <a href="{% url 'admin:routines_routine_add' %}"
+                                   class="text-warning text-decoration-none">Add your first routine →</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
 
-                    <!-- Empty state shown by JS when all rows are filtered out -->
-                    <div id="noResults" class="text-center py-5 text-inverse text-opacity-50 d-none">
-                        No routines match the current filter.
-                    </div>
+                <div id="noResults" class="text-center py-5 text-inverse text-opacity-50 d-none">
+                    No routines match the current filter.
                 </div>
             </div>
-
-            <div class="card-arrow">
-                <div class="card-arrow-top-left"></div>
-                <div class="card-arrow-top-right"></div>
-                <div class="card-arrow-bottom-left"></div>
-                <div class="card-arrow-bottom-right"></div>
-            </div>
         </div>
-        <!-- END main card -->
 
+        <div class="card-arrow">
+            <div class="card-arrow-top-left"></div>
+            <div class="card-arrow-top-right"></div>
+            <div class="card-arrow-bottom-left"></div>
+            <div class="card-arrow-bottom-right"></div>
+        </div>
     </div>
-    <!-- END #content -->
 
-    <a href="#" data-toggle="scroll-to-top" class="btn-scroll-top fade">
-        <i class="fa fa-arrow-up"></i>
-    </a>
-</div>
-<!-- END #app -->
+{% endblock %}
 
-<script src="{% static 'js/vendor.min.js' %}"></script>
-<script src="{% static 'js/app.min.js' %}"></script>
+
+{% block extra_scripts %}
 <script>
 (function () {
-    const tabs      = document.querySelectorAll('[data-filter]');
-    const rows      = document.querySelectorAll('.routine-row');
-    const search    = document.getElementById('routineSearch');
-    const noResults = document.getElementById('noResults');
+    var tabs      = document.querySelectorAll('[data-filter]');
+    var rows      = document.querySelectorAll('.routine-row');
+    var search    = document.getElementById('routineSearch');
+    var noResults = document.getElementById('noResults');
 
-    let currentFilter = 'all';
-    let currentSearch = '';
+    var currentFilter = 'all';
+    var currentSearch = '';
 
     function applyFilters() {
-        let visible = 0;
+        var visible = 0;
         rows.forEach(function (row) {
-            const slot   = row.dataset.slot;
-            const active = row.dataset.active;
-            const name   = row.dataset.name;
+            var slot   = row.dataset.slot;
+            var active = row.dataset.active;
+            var name   = row.dataset.name;
 
-            const matchesFilter =
+            var matchesFilter =
                 currentFilter === 'all' ||
                 (currentFilter === 'inactive' && active === 'false') ||
                 (currentFilter !== 'inactive' && slot === currentFilter && active === 'true');
 
-            const matchesSearch = !currentSearch || name.includes(currentSearch);
+            var matchesSearch = !currentSearch || name.includes(currentSearch);
 
-            const show = matchesFilter && matchesSearch;
+            var show = matchesFilter && matchesSearch;
             row.style.display = show ? '' : 'none';
             if (show) visible++;
         });
@@ -376,7 +244,6 @@
         currentSearch = e.target.value.toLowerCase().trim();
         applyFilters();
     });
-})();
+}());
 </script>
-</body>
-</html>
+{% endblock %}

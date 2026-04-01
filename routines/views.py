@@ -58,7 +58,7 @@ class RoutineListView(ListView):
             'active_count': len(active_list),
             'today_count': len(today_list),
             'today_overall_done': total_done,
-            'total_overall_total': total_items,
+            'today_overall_total': total_items,
             'max_streak': max((rd['streak'] for rd in routines_data), default=0),
         })
 

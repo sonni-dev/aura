@@ -1,365 +1,36 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
-<head>
-    <meta charset="utf-8">
-    <title>aura — HUD</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+{% block title %}aura — HUD{% endblock %}
 
-    <!-- Google Fonts: Rajdhani (display) + JetBrains Mono (mono) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 
-    <!-- HUD theme core -->
-    <link href="{% static 'css/vendor.min.css' %}" rel="stylesheet">
-    <link href="{% static 'css/app.min.css' %}" rel="stylesheet">
+{% comment %} {# ══════════════════════════════════════════════════════════════════════
+   EXTRA HEAD — ApexCharts + all HUD-specific styles
+   (Moved from the <head> of the old standalone hud.html.
+    Nothing here changed — it's a straight cut-and-paste into this block.)
+══════════════════════════════════════════════════════════════════════ #} {% endcomment %}
+{% block extra_head %}
 
-    <!-- ApexCharts -->
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<!-- ApexCharts (HUD only — other pages don't need it) -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
-    <style>
-        /* ── Aura overrides ── */
-        :root {
-            --bs-font-sans-serif: 'Rajdhani', system-ui, sans-serif;
-        }
-
-        /* Clock / weather widget in header */
-        .hud-clock-widget {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            padding: 0 12px;
-            border-left: 1px solid rgba(255,255,255,0.08);
-        }
-
-        .hud-time {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 18px;
-            font-weight: 400;
-            letter-spacing: 0.06em;
-            color: var(--bs-theme);
-            line-height: 1.1;
-        }
-
-        .hud-date {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 9px;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.4);
-            line-height: 1.2;
-            margin-top: 2px;
-        }
-
-        .hud-weather-icon {
-            font-size: 22px;
-            line-height: 1;
-        }
-
-        .hud-weather-temp {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 15px;
-            font-weight: 500;
-            color: rgba(255,255,255,0.85);
-            line-height: 1.1;
-        }
-
-        .hud-weather-desc {
-            font-size: 9px;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.35);
-            line-height: 1.2;
-        }
-
-        /* Routine item checklist */
-        .routine-item-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 4px 0;
-            font-size: 12px;
-        }
-
-        .routine-item-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            flex-shrink: 0;
-            border: 1px solid var(--bs-theme);
-            background: transparent;
-        }
-
-        .routine-item-dot.done {
-            background: var(--bs-theme);
-        }
-
-        .routine-item-label {
-            flex: 1;
-            color: rgba(255,255,255,0.7);
-        }
-
-        .routine-item-label.done {
-            color: rgba(255,255,255,0.3);
-            text-decoration: line-through;
-        }
-
-        /* Habit week dot grid */
-        .habit-week-dots {
-            display: flex;
-            gap: 3px;
-            align-items: center;
-        }
-
-        .habit-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 2px;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-
-        .habit-dot.logged {
-            background: var(--bs-theme);
-            border-color: var(--bs-theme);
-        }
-
-        .habit-dot.missed {
-            background: rgba(255,80,80,0.25);
-            border-color: rgba(255,80,80,0.2);
-        }
-
-        /* Priority badges */
-        .priority-high   { color: #ef4444; }
-        .priority-medium { color: var(--bs-theme); }
-        .priority-low    { color: rgba(255,255,255,0.3); }
-
-        /* Stalled badge */
-        .badge-stalled {
-            background: rgba(239,68,68,0.15);
-            color: #ef4444;
-            border: 1px solid rgba(239,68,68,0.3);
-        }
-
-        /* Overdue row */
-        .task-overdue { border-left: 2px solid #ef4444; padding-left: 8px; }
-        .task-today   { border-left: 2px solid var(--bs-theme); padding-left: 8px; }
-
-        /* Goal color tiers */
-        .goal-pct-high   { color: var(--bs-theme); }
-        .goal-pct-medium { color: #f59e0b; }
-        .goal-pct-low    { color: #ef4444; }
-
-        /* Sidebar brand tweaks */
-        .brand-img-text { font-family: 'Rajdhani', sans-serif !important; font-weight: 700; }
-
-        /* Empty state */
-        .hud-empty {
-            text-align: center;
-            padding: 24px;
-            color: rgba(255,255,255,0.2);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 11px;
-            letter-spacing: 0.06em;
-        }
-
-    /* ── Source-colour strips used in Look at the Day & Upcoming Soon ── */
-    .sched-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        padding: 7px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-    .sched-item:last-child { border-bottom: 0; }
- 
-    .sched-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        flex-shrink: 0;
-        margin-top: 4px;
-    }
-    .sched-dot-task     { background: var(--bs-theme); }
-    .sched-dot-routine  { background: var(--bs-warning); }
-    .sched-dot-goal     { background: var(--bs-info); }
-    .sched-dot-goal_item{ background: #a855f7; }  /* purple */
-    .sched-dot-habit    { background: #ec4899; }  /* pink */
- 
-    .sched-title {
-        font-size: 12px;
-        line-height: 1.3;
-        color: rgba(255,255,255,0.85);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .sched-title.is-done {
-        text-decoration: line-through;
-        color: rgba(255,255,255,0.3);
-    }
-    .sched-meta {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-top: 3px;
-        flex-wrap: wrap;
-    }
-    .sched-badge {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        letter-spacing: 0.04em;
-        padding: 1px 5px 2px;
-        border-radius: 0;
-        line-height: 1.5;
-    }
-    .sched-badge-task      { background:rgba( 12,208,150,0.12); color:var(--bs-theme); }
-    .sched-badge-routine   { background:rgba(255,167,  0,0.12); color:var(--bs-warning); }
-    .sched-badge-goal      { background:rgba( 48,190,255,0.12); color:var(--bs-info); }
-    .sched-badge-goal_item { background:rgba(168, 85,247,0.12); color:#a855f7; }
-    .sched-badge-habit     { background:rgba(236, 72,153,0.12); color:#ec4899; }
- 
-    .sched-time {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        letter-spacing: 0.04em;
-        color: rgba(255,255,255,0.3);
-    }
-    .sched-time.is-overdue { color: var(--bs-danger); }
-    .sched-time.is-logged  { color: var(--bs-theme); }
- 
-    .sched-pct {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        color: rgba(255,255,255,0.35);
-        margin-left: auto;
-        flex-shrink: 0;
-    }
- 
-    .sched-done-icon {
-        flex-shrink: 0;
-        font-size: 11px;
-        margin-top: 1px;
-        color: var(--bs-theme);
-    }
- 
-    /* Scrollable content area for tall cards */
-    .hud-scroll-area {
-        overflow-y: auto;
-        overflow-x: hidden;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(255,255,255,0.1) transparent;
-    }
-    .hud-scroll-area::-webkit-scrollbar { width: 3px; }
-    .hud-scroll-area::-webkit-scrollbar-track { background: transparent; }
-    .hud-scroll-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
- 
-    /* Days-until pill for Upcoming Soon */
-    .days-pill {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        letter-spacing: 0.06em;
-        padding: 1px 6px 2px;
-        border-radius: 0;
-        flex-shrink: 0;
-        min-width: 36px;
-        text-align: center;
-    }
-    .days-pill-1  { background:rgba(255, 59,48,0.15); color:#ff3b30; }
-    .days-pill-3  { background:rgba(255,149, 0,0.15); color:var(--bs-warning); }
-    .days-pill-7  { background:rgba(255,204, 0,0.15); color:var(--bs-yellow); }
-    .days-pill-14 { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.45); }
- 
-    /* ── Mini Calendar ─────────────────────────────────────────────── */
-    .mini-cal-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 1px;
-        text-align: center;
-    }
-    .cal-day-header {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 8px;
-        color: rgba(255,255,255,0.25);
-        letter-spacing: 0.06em;
-        padding: 3px 0 5px;
-    }
-    .cal-day-cell {
-        padding: 2px 1px;
-        min-height: 30px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    .cal-day-num {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 10px;
-        color: rgba(255,255,255,0.55);
-        line-height: 1.6;
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        transition: background 0.15s;
-    }
-    .cal-day-cell.cal-today .cal-day-num {
-        background: rgba(12,208,150,0.18);
-        color: var(--bs-theme);
-        font-weight: 600;
-    }
-    .cal-day-cell.cal-other-month .cal-day-num {
-        color: rgba(255,255,255,0.15);
-    }
-    .cal-dots {
-        display: flex;
-        justify-content: center;
-        gap: 2px;
-        margin-top: 1px;
-    }
-    .cal-dot {
-        width: 4px;
-        height: 4px;
-        border-radius: 50%;
-        display: inline-block;
-    }
-    .cal-dot-task     { background: var(--bs-theme); }
-    .cal-dot-goal     { background: var(--bs-info); }
-    .cal-dot-reminder { background: var(--bs-warning); }
- 
-    .cal-nav-btn {
-        background: none;
-        border: none;
-        color: rgba(255,255,255,0.35);
-        padding: 0 4px;
-        cursor: pointer;
-        font-size: 11px;
-        line-height: 1;
-        transition: color 0.15s;
-    }
-    .cal-nav-btn:hover { color: rgba(255,255,255,0.8); }
-
- 
-    /* ── Fixed-height stat cards (Row 1) ─────────────────────────────── */
+<style>
+    /* ── Fixed-height stat cards (Row 1) ────────────────────────────────── */
     .stat-card-fixed {
-        height: 140px;          /* tweak if content overflows */
+        height: 140px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
     }
- 
-    /* ── Routine slot section header ──────────────────────────────────── */
+
+    /* ── Routine slot section header ────────────────────────────────────── */
     .routine-slot-header {
         display: flex;
         align-items: center;
         gap: 10px;
         padding: 6px 0 5px;
         margin-bottom: 4px;
-        border-bottom: 1px solid rgba(255,255,255,0.08);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
     .routine-slot-label {
         font-family: 'JetBrains Mono', monospace;
@@ -371,22 +42,20 @@
     .routine-slot-meta {
         font-family: 'JetBrains Mono', monospace;
         font-size: 9px;
-        color: rgba(255,255,255,0.25);
+        color: rgba(255, 255, 255, 0.25);
         letter-spacing: 0.04em;
     }
     .routine-slot-hr {
         flex: 1;
         height: 1px;
-        background: rgba(255,167,0,0.15);
+        background: rgba(255, 167, 0, 0.15);
         border: none;
     }
- 
-    /* ── Individual routine block within a slot ───────────────────────── */
-    .routine-block {
-        margin-bottom: 14px;
-    }
+
+    /* ── Individual routine block within a slot ─────────────────────────── */
+    .routine-block { margin-bottom: 14px; }
     .routine-block:last-child { margin-bottom: 0; }
- 
+
     .routine-block-header {
         display: flex;
         align-items: center;
@@ -397,7 +66,7 @@
         font-size: 12px;
         font-weight: 600;
         letter-spacing: 0.05em;
-        color: rgba(255,255,255,0.85);
+        color: rgba(255, 255, 255, 0.85);
         flex: 1;
     }
     .routine-block-pct {
@@ -410,20 +79,20 @@
     }
     .routine-block-pct.is-complete { color: var(--bs-theme); }
     .routine-block-pct.is-partial  { color: var(--bs-warning); }
-    .routine-block-pct.is-empty    { color: rgba(255,255,255,0.3); }
- 
+    .routine-block-pct.is-empty    { color: rgba(255, 255, 255, 0.3); }
+
     .routine-streak {
         font-family: 'JetBrains Mono', monospace;
         font-size: 8px;
         letter-spacing: 0.05em;
         padding: 1px 5px 2px;
-        background: rgba(255,255,255,0.06);
-        color: rgba(255,255,255,0.35);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.35);
         border-radius: 0;
         flex-shrink: 0;
     }
- 
-    /* ── Routine item rows ────────────────────────────────────────────── */
+
+    /* ── Routine item rows ──────────────────────────────────────────────── */
     .rt-item-row {
         display: flex;
         align-items: center;
@@ -434,13 +103,14 @@
         transition: background 0.12s;
         user-select: none;
     }
-    .rt-item-row:hover { background: rgba(255,255,255,0.04); }
- 
+    .rt-item-row:hover { background: rgba(255, 255, 255, 0.04); }
+    .rt-item-row.is-loading { opacity: 0.5; pointer-events: none; }
+
     .rt-item-check {
         width: 14px;
         height: 14px;
         border-radius: 2px;
-        border: 1.5px solid rgba(255,255,255,0.2);
+        border: 1.5px solid rgba(255, 255, 255, 0.2);
         flex-shrink: 0;
         display: flex;
         align-items: center;
@@ -452,25 +122,31 @@
     .rt-item-row.is-done .rt-item-check {
         background: var(--bs-theme);
         border-color: var(--bs-theme);
-        color: rgba(0,0,0,0.8);
+        color: rgba(0, 0, 0, 0.8);
     }
     .rt-item-row.is-done .rt-item-check::after {
         content: '✓';
         font-size: 9px;
         font-weight: 700;
     }
- 
+    .rt-item-row.is-loading .rt-item-check {
+        border-color: rgba(255, 255, 255, 0.4);
+        animation: rt-pulse 0.6s ease-in-out infinite alternate;
+    }
+    @keyframes rt-pulse {
+        from { opacity: 0.4; }
+        to   { opacity: 1;   }
+    }
     .rt-item-cat {
         width: 5px;
         height: 5px;
         border-radius: 50%;
         flex-shrink: 0;
-        background: rgba(255,255,255,0.2);
+        background: rgba(255, 255, 255, 0.2);
     }
- 
     .rt-item-title {
         font-size: 12px;
-        color: rgba(255,255,255,0.75);
+        color: rgba(255, 255, 255, 0.75);
         flex: 1;
         transition: all 0.15s;
         white-space: nowrap;
@@ -478,35 +154,9 @@
         text-overflow: ellipsis;
     }
     .rt-item-row.is-done .rt-item-title {
-        color: rgba(255,255,255,0.25);
+        color: rgba(255, 255, 255, 0.25);
         text-decoration: line-through;
     }
- 
-    /* Loading/spinner state while toggling */
-    .rt-item-row.is-loading .rt-item-check {
-        border-color: rgba(255,255,255,0.4);
-        animation: rt-pulse 0.6s ease-in-out infinite alternate;
-    }
-    @keyframes rt-pulse {
-        from { opacity: 0.4; }
-        to   { opacity: 1;   }
-    }
- 
-    /* Progress bar under routine name */
-    .routine-progress-bar {
-        height: 2px;
-        background: rgba(255,255,255,0.07);
-        margin: 3px 0 8px;
-        overflow: hidden;
-    }
-    .routine-progress-fill {
-        height: 100%;
-        background: var(--bs-warning);
-        transition: width 0.3s ease;
-    }
-    .routine-progress-fill.complete { background: var(--bs-theme); }
- 
-    /* Category dot colours */
     .cat-body        { background: #60a5fa; }
     .cat-self_care   { background: #f472b6; }
     .cat-hygiene     { background: #a78bfa; }
@@ -517,40 +167,49 @@
     .cat-pet         { background: #fbbf24; }
     .cat-bedtime     { background: #818cf8; }
     .cat-wakeup      { background: #fde68a; }
-    .cat-other       { background: rgba(255,255,255,0.2); }
- 
-    /* ── Goal progress compact table ──────────────────────────────────── */
+    .cat-other       { background: rgba(255, 255, 255, 0.2); }
+
+    /* ── Routine progress bar ───────────────────────────────────────────── */
+    .routine-progress-bar {
+        height: 2px;
+        background: rgba(255, 255, 255, 0.07);
+        overflow: hidden;
+        margin: 3px 0 8px;
+    }
+    .routine-progress-fill {
+        height: 100%;
+        background: var(--bs-warning);
+        transition: width 0.3s ease;
+    }
+    .routine-progress-fill.complete { background: var(--bs-theme); }
+
+    /* ── Goal progress rows ─────────────────────────────────────────────── */
     .goal-row {
-        padding: 7px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
+        display: flex;
+        flex-direction: column;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
     .goal-row:last-child { border-bottom: 0; }
     .goal-row-name {
         font-size: 12px;
-        color: rgba(255,255,255,0.82);
+        color: rgba(255, 255, 255, 0.82);
         margin-bottom: 4px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    .goal-row-meta {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
+    .goal-row-meta { display: flex; align-items: center; gap: 8px; }
     .goal-bar-wrap {
         flex: 1;
         height: 3px;
-        background: rgba(255,255,255,0.07);
+        background: rgba(255, 255, 255, 0.07);
         overflow: hidden;
     }
-    .goal-bar-fill {
-        height: 100%;
-        transition: width 0.3s;
-    }
-    .goal-bar-fill.hi   { background: var(--bs-theme); }
-    .goal-bar-fill.mid  { background: var(--bs-warning); }
-    .goal-bar-fill.lo   { background: #f87171; }
+    .goal-bar-fill { height: 100%; transition: width 0.3s; }
+    .goal-bar-fill.hi  { background: var(--bs-theme); }
+    .goal-bar-fill.mid { background: var(--bs-warning); }
+    .goal-bar-fill.lo  { background: #f87171; }
     .goal-pct-label {
         font-family: 'JetBrains Mono', monospace;
         font-size: 9px;
@@ -561,14 +220,14 @@
     .goal-pct-label.hi  { color: var(--bs-theme); }
     .goal-pct-label.mid { color: var(--bs-warning); }
     .goal-pct-label.lo  { color: #f87171; }
- 
+
     /* ── Open Tasks compact list ────────────────────────────────────────── */
     .task-row {
         display: flex;
         align-items: baseline;
         gap: 8px;
         padding: 5px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         font-size: 12px;
     }
     .task-row:last-child { border-bottom: 0; }
@@ -582,10 +241,10 @@
     .task-row-dot.p-critical { background: #f87171; }
     .task-row-dot.p-high     { background: var(--bs-warning); }
     .task-row-dot.p-medium   { background: var(--bs-theme); }
-    .task-row-dot.p-low      { background: rgba(255,255,255,0.25); }
+    .task-row-dot.p-low      { background: rgba(255, 255, 255, 0.25); }
     .task-row-name {
         flex: 1;
-        color: rgba(255,255,255,0.78);
+        color: rgba(255, 255, 255, 0.78);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -593,246 +252,194 @@
     .task-row-date {
         font-family: 'JetBrains Mono', monospace;
         font-size: 9px;
-        color: rgba(255,255,255,0.28);
+        color: rgba(255, 255, 255, 0.28);
         flex-shrink: 0;
     }
     .task-row-date.overdue { color: #f87171; }
- 
+
+    /* ── Today schedule card ────────────────────────────────────────────── */
+    .sched-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 7px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .sched-item:last-child { border-bottom: 0; }
+    .sched-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 4px;
+    }
+    .sched-dot-task      { background: var(--bs-theme); }
+    .sched-dot-routine   { background: var(--bs-warning); }
+    .sched-dot-goal      { background: var(--bs-info); }
+    .sched-dot-goal_item { background: #a855f7; }
+    .sched-dot-habit     { background: #ec4899; }
+
+    .sched-title {
+        font-size: 12px;
+        line-height: 1.3;
+        color: rgba(255, 255, 255, 0.85);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .sched-title.is-done {
+        text-decoration: line-through;
+        color: rgba(255, 255, 255, 0.3);
+    }
+    .sched-meta { display: flex; align-items: center; gap: 6px; margin-top: 3px; flex-wrap: wrap; }
+    .sched-badge {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        letter-spacing: 0.04em;
+        padding: 1px 5px 2px;
+        border-radius: 0;
+        line-height: 1.5;
+    }
+    .sched-badge-task      { background: rgba( 12, 208, 150, 0.12); color: var(--bs-theme); }
+    .sched-badge-routine   { background: rgba(255, 167,   0, 0.12); color: var(--bs-warning); }
+    .sched-badge-goal      { background: rgba( 48, 190, 255, 0.12); color: var(--bs-info); }
+    .sched-badge-goal_item { background: rgba(168,  85, 247, 0.12); color: #a855f7; }
+    .sched-badge-habit     { background: rgba(236,  72, 153, 0.12); color: #ec4899; }
+
+    .sched-time {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        letter-spacing: 0.04em;
+        color: rgba(255, 255, 255, 0.3);
+    }
+    .sched-time.is-overdue { color: var(--bs-danger); }
+    .sched-time.is-logged  { color: var(--bs-theme); }
+    .sched-pct {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        color: rgba(255, 255, 255, 0.35);
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+    .sched-done-icon { flex-shrink: 0; font-size: 11px; margin-top: 1px; color: var(--bs-theme); }
+
+    /* ── Days-until pill (Upcoming Soon card) ───────────────────────────── */
+    .days-pill {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        letter-spacing: 0.06em;
+        padding: 1px 6px 2px;
+        border-radius: 0;
+        flex-shrink: 0;
+        min-width: 36px;
+        text-align: center;
+    }
+    .days-pill-1  { background: rgba(255,  59,  48, 0.15); color: #ff3b30; }
+    .days-pill-3  { background: rgba(255, 149,   0, 0.15); color: var(--bs-warning); }
+    .days-pill-7  { background: rgba(255, 204,   0, 0.15); color: var(--bs-yellow); }
+    .days-pill-14 { background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.45); }
+
+    /* ── Mini Calendar ──────────────────────────────────────────────────── */
+    .mini-cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        text-align: center;
+    }
+    .cal-day-header {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 8px;
+        color: rgba(255, 255, 255, 0.25);
+        letter-spacing: 0.06em;
+        padding: 3px 0 5px;
+    }
+    .cal-day-cell {
+        padding: 2px 1px;
+        min-height: 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .cal-day-num {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.55);
+        line-height: 1.6;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: background 0.15s;
+    }
+    .cal-day-cell.cal-today .cal-day-num {
+        background: rgba(12, 208, 150, 0.18);
+        color: var(--bs-theme);
+        font-weight: 600;
+    }
+    .cal-day-cell.cal-other-month .cal-day-num { color: rgba(255, 255, 255, 0.15); }
+    .cal-dots { display: flex; justify-content: center; gap: 2px; margin-top: 1px; }
+    .cal-dot { width: 4px; height: 4px; border-radius: 50%; display: inline-block; }
+    .cal-dot-task     { background: var(--bs-theme); }
+    .cal-dot-goal     { background: var(--bs-info); }
+    .cal-dot-reminder { background: var(--bs-warning); }
+
+    .cal-nav-btn {
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.35);
+        padding: 0 4px;
+        cursor: pointer;
+        font-size: 11px;
+        line-height: 1;
+        transition: color 0.15s;
+    }
+    .cal-nav-btn:hover { color: rgba(255, 255, 255, 0.8); }
+
+    /* ── Scrollable content areas ───────────────────────────────────────── */
+    .hud-scroll-area {
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+    }
+    .hud-scroll-area::-webkit-scrollbar       { width: 3px; }
+    .hud-scroll-area::-webkit-scrollbar-track { background: transparent; }
+    .hud-scroll-area::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 2px; }
+
+    /* ── Routine item checklist (older helper class) ─────────────────────── */
+    .routine-item-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; }
 </style>
-</head>
 
-<body>
-<!-- BEGIN #app -->
-<div id="app" class="app">
+{% endblock %}
 
-    <!-- ═══════════════════════════════ HEADER ═══════════════════════════ -->
-    <div id="header" class="app-header">
 
-        <!-- desktop sidebar toggle -->
-        <div class="desktop-toggler">
-            <button type="button" class="menu-toggler"
-                data-toggle-class="app-sidebar-collapsed"
-                data-dismiss-class="app-sidebar-toggled"
-                data-toggle-target=".app">
-                <span class="bar"></span>
-                <span class="bar"></span>
-                <span class="bar"></span>
-            </button>
-        </div>
+{% comment %} {# ══════════════════════════════════════════════════════════════════════
+   CONTENT — everything that was inside <div id="content" class="app-content">
+   in the old standalone hud.html. Cut starts AFTER that opening tag
+   and ends BEFORE its matching closing </div>.
+   base.html provides the wrapper div — do not duplicate it here.
+══════════════════════════════════════════════════════════════════════ #} {% endcomment %}
+{% block content %}
 
-        <!-- mobile sidebar toggle -->
-        <div class="mobile-toggler">
-            <button type="button" class="menu-toggler"
-                data-toggle-class="app-sidebar-mobile-toggled"
-                data-toggle-target=".app">
-                <span class="bar"></span>
-                <span class="bar"></span>
-                <span class="bar"></span>
-            </button>
-        </div>
-
-        <!-- brand -->
-        <div class="brand">
-            <a href="{% url 'dashboard:hud' %}" class="brand-logo">
-                <span class="brand-img">
-                    <span class="brand-img-text text-theme">A</span>
-                </span>
-                <span class="brand-text" style="font-family:'Rajdhani',sans-serif; letter-spacing:0.06em;">AURA</span>
-            </a>
-        </div>
-
-        <!-- right-side menu -->
-        <div class="menu">
-
-            <!-- Reminders bell -->
-            <div class="menu-item dropdown dropdown-mobile-full">
-                <a href="#" data-bs-toggle="dropdown" data-bs-display="static" class="menu-link" role="button" aria-expanded="false">
-                    <div class="menu-icon"><i class="bi bi-bell nav-icon"></i></div>
-                    {% if due_reminders_count > 0 %}
-                    <div class="menu-badge bg-theme"></div>
-                    {% endif %}
-                </a>
-                <div class="dropdown-menu dropdown-menu-end mt-1 w-300px fs-11px pt-1" data-bs-popper="static">
-                    <h6 class="dropdown-header fs-10px mb-1">DUE REMINDERS</h6>
-                    <div class="dropdown-divider mt-1"></div>
-                    {% for r in due_reminders %}
-                    <a href="#" class="d-flex align-items-center py-10px dropdown-item text-wrap fw-semibold">
-                        <div class="fs-20px">
-                            {% if r.task %}<i class="bi bi-check2-square text-theme"></i>
-                            {% elif r.routine %}<i class="bi bi-arrow-repeat text-theme"></i>
-                            {% elif r.goal %}<i class="bi bi-bullseye text-theme"></i>
-                            {% else %}<i class="bi bi-bell text-theme"></i>{% endif %}
-                        </div>
-                        <div class="flex-1 flex-wrap ps-3">
-                            <div class="mb-1 text-inverse">{{ r.title|upper }}</div>
-                            <div class="small text-inverse text-opacity-50">{{ r.frequency|upper }}</div>
-                        </div>
-                        <div class="ps-2 fs-16px">
-                            <i class="bi bi-chevron-right"></i>
-                        </div>
-                    </a>
-                    {% empty %}
-                    <div class="py-10px px-3 text-center text-inverse text-opacity-40 fs-10px">
-                        NO REMINDERS DUE
-                    </div>
-                    {% endfor %}
-                    <hr class="my-0">
-                    <div class="py-10px mb-n2 text-center">
-                        <a href="#" class="text-decoration-none fw-bold fs-10px">SEE ALL REMINDERS</a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Clock / Date / Weather — replaces profile image -->
-            <div class="menu-item">
-                <div class="hud-clock-widget">
-                    <div>
-                        <div class="hud-time" id="hud-clock">--:--:--</div>
-                        <div class="hud-date" id="hud-date">{{ today|date:"l, N j" }}</div>
-                    </div>
-                    <div class="text-end">
-                        <div class="hud-weather-icon" id="hud-weather-icon">⬡</div>
-                        <div class="hud-weather-temp" id="hud-weather-temp">--°</div>
-                        <div class="hud-weather-desc" id="hud-weather-desc">loading</div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-        <!-- END menu -->
-    </div>
-    <!-- END #header -->
-
-    <!-- ═══════════════════════════════ SIDEBAR ══════════════════════════ -->
-    <div id="sidebar" class="app-sidebar">
-        <div class="app-sidebar-content" data-scrollbar="true" data-height="100%">
-            <div class="menu">
-
-                <div class="menu-header">Mission Control</div>
-
-                <div class="menu-item active">
-                    <a href="{% url 'dashboard:hud' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-cpu"></i></span>
-                        <span class="menu-text">Dashboard</span>
-                    </a>
-                </div>
-
-                <div class="menu-header">Data</div>
-
-                <div class="menu-item">
-                    <a href="#" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-check2-square"></i></span>
-                        <span class="menu-text">Tasks</span>
-                        {% if tasks_todo_count > 0 %}
-                        <span class="badge bg-theme text-theme-900 ms-auto">{{ tasks_todo_count }}</span>
-                        {% endif %}
-                    </a>
-                </div>
-
-                <div class="menu-item">
-                    <a href="{% url 'routines:list' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-arrow-repeat"></i></span>
-                        <span class="menu-text">Routines</span>
-                        {% if routines_today_count > 0 %}
-                        <span class="badge bg-secondary bg-opacity-50 text-inverse ms-auto">{{ routines_today_count }} today</span>
-                        {% endif %}
-                    </a>
-                </div>
-
-                <div class="menu-item">
-                    <a href="#" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-bullseye"></i></span>
-                        <span class="menu-text">Goals</span>
-                        {% if goals_count > 0 %}
-                        <span class="badge bg-secondary bg-opacity-50 text-inverse ms-auto">{{ goals_count }}</span>
-                        {% endif %}
-                    </a>
-                </div>
-
-                <div class="menu-item">
-                    <a href="#" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-graph-up"></i></span>
-                        <span class="menu-text">Habits</span>
-                        {% if habits_count > 0 %}
-                        <span class="badge bg-secondary bg-opacity-50 text-inverse ms-auto">{{ habits_count }}</span>
-                        {% endif %}
-                    </a>
-                </div>
-
-                <div class="menu-item">
-                    <a href="#" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-bell"></i></span>
-                        <span class="menu-text">Reminders</span>
-                        {% if due_reminders_count > 0 %}
-                        <span class="badge bg-theme text-theme-900 ms-auto">{{ due_reminders_count }}</span>
-                        {% endif %}
-                    </a>
-                </div>
-
-                <div class="menu-divider"></div>
-                <div class="menu-header">Quick Add</div>
-
-                <div class="menu-item">
-                    {% comment %} <a href="{% url 'admin:tasks_task_add' %}" class="menu-link"> {% endcomment %}
-                        <a href="" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-plus-circle"></i></span>
-                        <span class="menu-text">New Task</span>
-                    </a>
-                </div>
-
-                <div class="menu-item">
-                    {% comment %} <a href="{% url 'admin:goals_goalitem_add' %}" class="menu-link"> {% endcomment %}
-                    <a href="" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-plus-circle"></i></span>
-                        <span class="menu-text">New Goal Item</span>
-                    </a>
-                </div>
-
-                <div class="menu-divider"></div>
-                <div class="menu-header">Admin</div>
-
-                <div class="menu-item">
-                    {% comment %} <a href="{% url 'admin:index' %}" class="menu-link"> {% endcomment %}
-                    <a href="" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-sliders"></i></span>
-                        <span class="menu-text">Admin Panel</span>
-                    </a>
-                </div>
-
-            </div>
-            <!-- version stamp -->
-            <div class="p-3 px-4 mt-auto">
-                <div class="text-inverse text-opacity-25 fs-10px" style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">
-                    AURA v2.0 &middot; {{ today|date:"Y" }}
-                </div>
-            </div>
+    <!-- ── Page title ────────────────────────────────────────────────── -->
+    <div class="d-flex align-items-center mb-3">
+        <div>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="#">AURA</a></li>
+                <li class="breadcrumb-item active">DASHBOARD</li>
+            </ol>
+            <h1 class="page-header mb-0"
+                style="font-family:'Rajdhani',sans-serif; font-weight:600; letter-spacing:0.04em;">
+                Mission Control
+                <small class="ms-2 text-inverse text-opacity-40 fs-14px fw-normal"
+                       style="font-family:'JetBrains Mono',monospace;">{{ today|date:"l" }}</small>
+            </h1>
         </div>
     </div>
-    <!-- END #sidebar -->
 
-    <!-- mobile sidebar backdrop -->
-    <button class="app-sidebar-mobile-backdrop"
-        data-toggle-target=".app"
-        data-toggle-class="app-sidebar-mobile-toggled"></button>
-
-    <!-- ═══════════════════════════════ CONTENT ══════════════════════════ -->
-    <div id="content" class="app-content">
-
-        <!-- ── Page title ────────────────────────────────────────────────── -->
-        <div class="d-flex align-items-center mb-3">
-            <div>
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="#">AURA</a></li>
-                    <li class="breadcrumb-item active">DASHBOARD</li>
-                </ol>
-                <h1 class="page-header mb-0" style="font-family:'Rajdhani',sans-serif; font-weight:600; letter-spacing:0.04em;">
-                    Mission Control
-                    <small class="ms-2 text-inverse text-opacity-40 fs-14px fw-normal" style="font-family:'JetBrains Mono',monospace;">{{ today|date:"l" }}</small>
-                </h1>
-            </div>
-        </div>
-
-         <!-- ── ROW 1 — Four stat cards (fixed height) ─────────────────── -->
+    <!-- ── ROW 1 — Four stat cards (fixed height) ─────────────────── -->
         <div class="row row-cols-xl-4 row-cols-lg-2 g-0 mb-0">
  
             <!-- TASKS DUE -->
@@ -1436,21 +1043,33 @@
  
             </div>
             <!-- END RIGHT col-xl-4 -->
- 
+
         </div>
         <!-- END MAIN CONTENT ROW -->
-         
 
-</div>
-<!-- END #app -->
+{% endblock %}
 
-<!-- HUD theme core JS -->
-<script src="{% static 'js/vendor.min.js' %}"></script>
-<script src="{% static 'js/app.min.js' %}"></script>
+
+{% comment %} {# ══════════════════════════════════════════════════════════════════════
+   EXTRA SCRIPTS — page-specific JS
+   Cut from the bottom of the old standalone hud.html.
+   DO NOT include the clock or weather blocks — those now live in base.html.
+   Keep everything else:
+     • ApexCharts initializations (chart-tasks-due, chart-routines, etc.)
+     • Mini-calendar JS (renderCalendar, prevBtn/nextBtn listeners)
+     • Routine item toggle JS (toggleRoutineItem / fetch to toggle API)
+     • Periodic stats-refresh fetch (if present)
+══════════════════════════════════════════════════════════════════════ #} {% endcomment %}
+{% block extra_scripts %}
 
 {{ calendar_dots_data|json_script:"calendar-dots-data" }}
- 
-<script>
+
+    {% comment %} {#
+       PASTE YOUR HUD <script> BLOCKS HERE
+       (everything from <script> ... </script> at the bottom of the old
+       hud.html, minus the clock and weather functions)
+    #} {% endcomment %}
+    <script>
 (function () {
     'use strict';
  
@@ -1550,55 +1169,7 @@
 </script>
 
 <script>
-/* ══════════════════════════════════════════════════════════════
-   CLOCK
-══════════════════════════════════════════════════════════════ */
-function tickClock() {
-    const now  = new Date();
-    const pad  = n => String(n).padStart(2, '0');
-    document.getElementById('hud-clock').textContent =
-        `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-}
-tickClock();
-setInterval(tickClock, 1000);
-
-/* ══════════════════════════════════════════════════════════════
-   WEATHER — wttr.in (Raleigh, NC)
-══════════════════════════════════════════════════════════════ */
-const WEATHER_URL = 'https://wttr.in/Raleigh,NC?format=j1';
-const WEATHER_ICONS = {
-    113: '☀️', 116: '⛅', 119: '☁️', 122: '☁️',
-    143: '🌫️', 176: '🌦️', 179: '🌨️', 182: '🌧️',
-    185: '🌧️', 200: '⛈️', 227: '❄️', 230: '❄️',
-    248: '🌫️', 260: '🌫️', 263: '🌦️', 266: '🌧️',
-    281: '🌧️', 284: '🌧️', 293: '🌦️', 296: '🌧️',
-    299: '🌧️', 302: '🌧️', 305: '🌧️', 308: '🌧️',
-    311: '🌧️', 314: '🌧️', 317: '🌨️', 320: '🌨️',
-    323: '🌨️', 326: '🌨️', 329: '❄️', 332: '❄️',
-    335: '❄️', 338: '❄️', 350: '🌧️', 353: '🌦️',
-    356: '🌧️', 359: '🌧️', 362: '🌨️', 365: '🌨️',
-    368: '🌨️', 371: '❄️', 374: '🌨️', 377: '🌨️',
-    386: '⛈️', 389: '⛈️', 392: '⛈️', 395: '❄️',
-};
-
-fetch(WEATHER_URL)
-    .then(r => r.json())
-    .then(data => {
-        const cur    = data.current_condition[0];
-        const code   = parseInt(cur.weatherCode);
-        const tempF  = cur.temp_F;
-        const desc   = cur.weatherDesc[0].value;
-        const icon   = WEATHER_ICONS[code] || '🌡️';
-
-        document.getElementById('hud-weather-icon').textContent = icon;
-        document.getElementById('hud-weather-temp').textContent = `${tempF}°F`;
-        document.getElementById('hud-weather-desc').textContent = desc.toUpperCase();
-    })
-    .catch(() => {
-        document.getElementById('hud-weather-desc').textContent = 'UNAVAIL';
-    });
-
-/* ══════════════════════════════════════════════════════════════
+    /* ══════════════════════════════════════════════════════════════
    APEXCHARTS — stat card sparklines
 ══════════════════════════════════════════════════════════════ */
 const THEME_COLOR = getComputedStyle(document.documentElement)
@@ -1661,7 +1232,7 @@ new ApexCharts(document.getElementById('chart-habits'), {
 /* ══════════════════════════════════════════════════════════════
    AUTO REFRESH — full page reload every 60 seconds
 ══════════════════════════════════════════════════════════════ */
-{% comment %} setTimeout(() => location.reload(), 60 * 1000); {% endcomment %}
+setTimeout(() => location.reload(), 60 * 1000);
 </script>
 
 <script>
@@ -1742,5 +1313,4 @@ function toggleRoutineItem(row) {
 }
 </script>
 
-</body>
-</html>
+{% endblock %}

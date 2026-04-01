@@ -1,602 +1,492 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
-<head>
-    <meta charset="utf-8">
-    <title>Aura | {{ routine.name }}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token }}">
-    <link href="{% static 'css/vendor.min.css' %}" rel="stylesheet">
-    <link href="{% static 'css/app.min.css' %}" rel="stylesheet">
 
-    <!-- Google Fonts: Rajdhani (display) + JetBrains Mono (mono) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+{% block title %}Aura | {{ routine.name }}{% endblock %}
 
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-</head>
-<body>
-<div id="app" class="app">
 
-    <!-- ═══════════════════════════ HEADER ═══════════════════════════════ -->
-    <div id="header" class="app-header">
-        <div class="desktop-toggler">
-            <button type="button" class="menu-toggler"
-                    data-toggle-class="app-sidebar-collapsed"
-                    data-dismiss-class="app-sidebar-toggled"
-                    data-toggle-target=".app">
-                <span class="bar"></span><span class="bar"></span><span class="bar"></span>
-            </button>
+{% block content %}
+
+    <!-- Breadcrumb + Title ─────────────────────────────────────────────── -->
+    <div class="d-flex align-items-center mb-3">
+        <div>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard:hud' %}">DASHBOARD</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'routines:list' %}">ROUTINES</a></li>
+                <li class="breadcrumb-item active">{{ routine.name|upper }}</li>
+            </ol>
+            <h1 class="page-header mb-0">{{ routine.name }}</h1>
         </div>
-        <div class="mobile-toggler">
-            <button type="button" class="menu-toggler"
-                    data-toggle-class="app-sidebar-mobile-toggled"
-                    data-toggle-target=".app">
-                <span class="bar"></span><span class="bar"></span><span class="bar"></span>
-            </button>
+    </div>
+
+    <!-- Action bar ─────────────────────────────────────────────────────── -->
+    <div class="mb-3 d-md-flex fw-bold gap-4">
+        <div class="mt-md-0 mt-2">
+            <a href="{% url 'admin:routines_routine_change' routine.pk %}"
+               class="text-decoration-none text-inverse">
+                <i class="bi bi-pen fa-fw me-1 text-inverse text-opacity-50"></i> Edit Routine
+            </a>
         </div>
-        <div class="brand">
-            <a href="{% url 'dashboard:hud' %}" class="brand-logo">
-                <span class="brand-img">
-                    <span class="brand-img-text text-theme">A</span>
-                </span>
-                <span class="brand-text">AURA</span>
+        <div class="mt-md-0 mt-2">
+            <a href="#" class="text-decoration-none"
+               data-bs-toggle="modal" data-bs-target="#itemModal">
+                <i class="bi bi-plus-circle fa-fw me-1 text-warning text-opacity-75"></i>
+                <span class="text-warning text-opacity-75">Add Item</span>
+            </a>
+        </div>
+        <div class="mt-md-0 mt-2 ms-md-auto">
+            <a href="{% url 'routines:list' %}" class="text-decoration-none text-inverse text-opacity-50">
+                <i class="bi bi-arrow-left fa-fw me-1"></i> Back to Routines
             </a>
         </div>
     </div>
 
-    <!-- ═══════════════════════════ SIDEBAR ══════════════════════════════ -->
-    <div id="sidebar" class="app-sidebar">
-        <div class="app-sidebar-content" data-scrollbar="true" data-height="100%">
-            <div class="menu">
-                <div class="menu-header">Navigation</div>
+    <!-- ═══════════════════ MAIN TWO-COLUMN LAYOUT ══════════════════════ -->
+    <div class="row gx-4">
 
-                <div class="menu-item">
-                    <a href="{% url 'dashboard:hud' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-cpu"></i></span>
-                        <span class="menu-text">Dashboard</span>
-                    </a>
-                </div>
+        <!-- ──────────────────── LEFT COLUMN ─────────────────────────── -->
+        <div class="col-lg-8">
 
-                <div class="menu-item">
-                    <a href="{% url 'admin:tasks_task_changelist' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-check2-square"></i></span>
-                        <span class="menu-text">Tasks</span>
-                    </a>
-                </div>
-
-                <div class="menu-item active">
-                    <a href="{% url 'routines:list' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-arrow-repeat"></i></span>
-                        <span class="menu-text">Routines</span>
-                    </a>
-                </div>
-
-                <div class="menu-item">
-                    <a href="{% url 'admin:goals_goal_changelist' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-bullseye"></i></span>
-                        <span class="menu-text">Goals</span>
-                    </a>
-                </div>
-
-                <div class="menu-item">
-                    <a href="{% url 'admin:habits_habit_changelist' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-activity"></i></span>
-                        <span class="menu-text">Habits</span>
-                    </a>
-                </div>
-
-                <div class="menu-item">
-                    <a href="{% url 'admin:reminders_reminder_changelist' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-bell"></i></span>
-                        <span class="menu-text">Reminders</span>
-                    </a>
-                </div>
-
-                <div class="menu-divider"></div>
-
-                <div class="menu-item">
-                    <a href="{% url 'admin:index' %}" class="menu-link">
-                        <span class="menu-icon"><i class="bi bi-gear"></i></span>
-                        <span class="menu-text">Admin</span>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <button class="app-sidebar-mobile-backdrop"
-            data-toggle-target=".app"
-            data-toggle-class="app-sidebar-mobile-toggled"></button>
-
-    <!-- ════════════════════════════ CONTENT ═════════════════════════════ -->
-    <div id="content" class="app-content">
-
-        <!-- Breadcrumb + Title ─────────────────────────────────────────── -->
-        <div class="d-flex align-items-center mb-3">
-            <div>
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard:hud' %}">DASHBOARD</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'routines:list' %}">ROUTINES</a></li>
-                    <li class="breadcrumb-item active">{{ routine.name|upper }}</li>
-                </ol>
-                <h1 class="page-header mb-0">{{ routine.name }}</h1>
-            </div>
-        </div>
-
-        <!-- Action bar ─────────────────────────────────────────────────── -->
-        <div class="mb-3 d-md-flex fw-bold gap-4">
-            <div class="mt-md-0 mt-2">
-                <a href="{% url 'admin:routines_routine_change' routine.pk %}"
-                   class="text-decoration-none text-inverse">
-                    <i class="bi bi-pen fa-fw me-1 text-inverse text-opacity-50"></i> Edit Routine
-                </a>
-            </div>
-            <div class="mt-md-0 mt-2">
-                <a href="#" class="text-decoration-none text-inverse"
-                   data-bs-toggle="modal" data-bs-target="#itemModal">
-                    <i class="bi bi-plus-circle fa-fw me-1 text-warning text-opacity-75"></i>
-                    <span class="text-warning text-opacity-75">Add Item</span>
-                </a>
-            </div>
-            <div class="mt-md-0 mt-2 ms-md-auto">
-                <a href="{% url 'routines:list' %}" class="text-decoration-none text-inverse text-opacity-50">
-                    <i class="bi bi-arrow-left fa-fw me-1"></i> Back to Routines
-                </a>
-            </div>
-        </div>
-
-        <!-- ═══════════════════ MAIN TWO-COLUMN LAYOUT ═══════════════════ -->
-        <div class="row gx-4">
-
-            <!-- ──────────────────── LEFT COLUMN ──────────────────────── -->
-            <div class="col-lg-8">
-
-                <!-- ════ Routine Items Card ═══════════════════════════ -->
-                <div class="card mb-4">
-                    <div class="card-header d-flex align-items-center bg-inverse bg-opacity-10 fw-400">
-                        <span>
-                            Items
-                            <span class="text-inverse text-opacity-50 fs-13px ms-1">
-                                ({{ items_data|length }} active{% if inactive_items %}, {{ inactive_items.count }} inactive{% endif %})
-                            </span>
+            <!-- ════ Routine Items Card ═══════════════════════════════ -->
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center bg-inverse bg-opacity-10 fw-400">
+                    <span>
+                        Items
+                        <span class="text-inverse text-opacity-50 fs-13px ms-1">
+                            ({{ items_data|length }} active{% if inactive_items %}, {{ inactive_items.count }} inactive{% endif %})
                         </span>
-                        <a href="#" class="ms-auto text-decoration-none text-inverse text-opacity-50 fs-13px"
+                    </span>
+                    <a href="#" class="ms-auto text-decoration-none text-inverse text-opacity-50 fs-13px"
+                       data-bs-toggle="modal" data-bs-target="#itemModal"
+                       onclick="resetItemModal()">
+                        <i class="bi bi-plus-circle me-1"></i> Add Item
+                    </a>
+                </div>
+
+                <div class="card-body p-0">
+                    {% if items_data %}
+                    <table class="table table-hover m-0" id="itemsTable">
+                        <thead>
+                            <tr class="fs-12px text-inverse text-opacity-50">
+                                <th class="border-top-0 pt-3 pb-2 ps-4">#</th>
+                                <th class="border-top-0 pt-3 pb-2">Item</th>
+                                <th class="border-top-0 pt-3 pb-2">Category</th>
+                                <th class="border-top-0 pt-3 pb-2 text-center">Streak</th>
+                                <th class="border-top-0 pt-3 pb-2 text-center">Done Today</th>
+                                <th class="border-top-0 pt-3 pb-2 pe-4"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for id in items_data %}
+                            <tr data-item-id="{{ id.item.pk }}">
+                                <td class="align-middle ps-4 text-inverse text-opacity-35 font-monospace fs-12px">
+                                    {{ id.item.order }}
+                                </td>
+                                <td class="align-middle fw-semibold text-inverse">{{ id.item.title }}</td>
+                                <td class="align-middle">
+                                    {% if id.item.category %}
+                                    <span class="badge bg-inverse bg-opacity-15 text-inverse text-opacity-65 fs-11px px-2">
+                                        {{ id.item.get_category_display }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-inverse text-opacity-20 fs-11px">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle text-center font-monospace">
+                                    {% if id.streak > 0 %}
+                                    <span class="text-warning fs-12px">🔥 {{ id.streak }}d</span>
+                                    {% else %}
+                                    <span class="text-inverse text-opacity-20 fs-11px">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle text-center" id="table-icon-{{ id.item.pk }}">
+                                    {% if id.done_today %}
+                                    <i class="bi bi-check-circle-fill text-success fs-16px"></i>
+                                    {% else %}
+                                    <i class="bi bi-circle text-inverse text-opacity-20 fs-16px"></i>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle text-end pe-4">
+                                    <a href="#"
+                                       class="text-inverse text-opacity-40 me-3 fs-14px"
+                                       title="Edit item"
+                                       data-bs-toggle="modal"
+                                       data-bs-target="#itemModal"
+                                       onclick="openEditModal({{ id.item.pk }}, '{{ id.item.title|escapejs }}', '{{ id.item.category }}', {{ id.item.order }}); return false;">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="#"
+                                       class="text-inverse text-opacity-40 fs-14px"
+                                       title="Archive item"
+                                       onclick="toggleItemActive({{ id.item.pk }}, '{% url 'routines:item_toggle_active' id.item.pk %}'); return false;">
+                                        <i class="bi bi-archive"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="text-center py-5 text-inverse text-opacity-50">
+                        No active items yet.
+                        <a href="#" class="text-warning text-decoration-none ms-1"
                            data-bs-toggle="modal" data-bs-target="#itemModal"
                            onclick="resetItemModal()">
-                            <i class="bi bi-plus-circle me-1"></i> Add Item
+                            Add your first item →
                         </a>
                     </div>
+                    {% endif %}
+                </div>
 
-                    <div class="card-body p-0">
-                        {% if items_data %}
-                        <table class="table table-hover m-0" id="itemsTable">
-                            <thead>
-                                <tr class="fs-12px text-inverse text-opacity-50">
-                                    <th class="border-top-0 pt-3 pb-2 ps-4">#</th>
-                                    <th class="border-top-0 pt-3 pb-2">Item</th>
-                                    <th class="border-top-0 pt-3 pb-2">Category</th>
-                                    <th class="border-top-0 pt-3 pb-2 text-center">Streak</th>
-                                    <th class="border-top-0 pt-3 pb-2 text-center">Done Today</th>
-                                    <th class="border-top-0 pt-3 pb-2 pe-4"></th>
-                                </tr>
-                            </thead>
+                {% if inactive_items %}
+                <div class="card-footer bg-none p-3 border-top border-inverse border-opacity-10">
+                    <details>
+                        <summary class="text-inverse text-opacity-40 fs-12px"
+                                 style="cursor:pointer;user-select:none;">
+                            <i class="bi bi-archive me-1"></i>
+                            {{ inactive_items.count }} archived item{{ inactive_items.count|pluralize }}
+                        </summary>
+                        <table class="table table-sm mt-3 mb-0">
                             <tbody>
-                                {% for id in items_data %}
-                                <tr data-item-id="{{ id.item.pk }}">
-                                    <td class="align-middle ps-4 text-inverse text-opacity-35 font-monospace fs-12px">
-                                        {{ id.item.order }}
-                                    </td>
-                                    <td class="align-middle fw-semibold text-inverse">
-                                        {{ id.item.title }}
-                                    </td>
-                                    <td class="align-middle">
-                                        {% if id.item.category %}
-                                        <span class="badge bg-inverse bg-opacity-15 text-inverse text-opacity-65 fs-11px px-2">
-                                            {{ id.item.get_category_display }}
-                                        </span>
-                                        {% else %}
-                                        <span class="text-inverse text-opacity-20 fs-11px">—</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="align-middle text-center font-monospace">
-                                        {% if id.streak > 0 %}
-                                        <span class="text-warning fs-12px">🔥 {{ id.streak }}d</span>
-                                        {% else %}
-                                        <span class="text-inverse text-opacity-20 fs-11px">—</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="align-middle text-center" id="table-icon-{{ id.item.pk }}">
-                                        {% if id.done_today %}
-                                        <i class="bi bi-check-circle-fill text-success fs-16px"></i>
-                                        {% else %}
-                                        <i class="bi bi-circle text-inverse text-opacity-20 fs-16px"></i>
-                                        {% endif %}
-                                    </td>
-                                    <td class="align-middle text-end pe-4">
+                                {% for item in inactive_items %}
+                                <tr>
+                                    <td class="text-inverse text-opacity-35 ps-0 border-0">{{ item.title }}</td>
+                                    <td class="text-end pe-0 border-0">
                                         <a href="#"
-                                           class="text-inverse text-opacity-40 me-3 fs-14px"
-                                           title="Edit item"
-                                           data-bs-toggle="modal"
-                                           data-bs-target="#itemModal"
-                                           onclick="openEditModal({{ id.item.pk }}, '{{ id.item.title|escapejs }}', '{{ id.item.category }}', {{ id.item.order }}); return false;">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <a href="#"
-                                           class="text-inverse text-opacity-40 fs-14px"
-                                           title="Archive item"
-                                           onclick="toggleItemActive({{ id.item.pk }}, '{% url 'routines:item_toggle_active' id.item.pk %}'); return false;">
-                                            <i class="bi bi-archive"></i>
+                                           class="text-warning fs-12px text-decoration-none"
+                                           onclick="toggleItemActive({{ item.pk }}, '{% url 'routines:item_toggle_active' item.pk %}'); return false;">
+                                            Restore
                                         </a>
                                     </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </details>
+                </div>
+                {% endif %}
+
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
+                </div>
+            </div>
+            <!-- END Routine Items Card -->
+
+            <!-- ════ Completion History Card ══════════════════════════ -->
+            <div class="card">
+                <div class="card-header bg-inverse bg-opacity-10 fw-400">
+                    Completion History
+                    <span class="text-inverse text-opacity-50 fs-12px ms-1">— last 30 scheduled days</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if history %}
+                    <table class="table table-sm m-0">
+                        <thead>
+                            <tr class="fs-12px text-inverse text-opacity-50">
+                                <th class="border-top-0 pt-3 pb-2 ps-4">Date</th>
+                                <th class="border-top-0 pt-3 pb-2">Day</th>
+                                <th class="border-top-0 pt-3 pb-2">Done</th>
+                                <th class="border-top-0 pt-3 pb-2" style="min-width:150px;">Progress</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for h in history %}
+                            <tr {% if h.is_today %}style="background:rgba(245,158,11,0.05);"{% endif %}>
+                                <td class="ps-4 font-monospace fs-12px align-middle
+                                    {% if h.is_today %}text-warning fw-bold{% else %}text-inverse text-opacity-65{% endif %}">
+                                    {{ h.date|date:"M j, Y" }}
+                                    {% if h.is_today %}
+                                    <span class="badge bg-warning text-dark fs-9px ms-1 px-2">TODAY</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-inverse text-opacity-40 fs-12px align-middle">
+                                    {{ h.date|date:"D" }}
+                                </td>
+                                <td class="align-middle font-monospace fs-12px fw-semibold
+                                    {% if h.pct == 100 %}text-success{% elif h.pct > 0 %}text-warning{% else %}text-inverse text-opacity-35{% endif %}">
+                                    {{ h.done }}/{{ h.total }}
+                                </td>
+                                <td class="align-middle">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-1" style="height:5px;max-width:120px;">
+                                            <div class="progress-bar
+                                                {% if h.pct == 100 %}bg-success{% else %}bg-warning{% endif %}"
+                                                 style="width:{{ h.pct }}%;"></div>
+                                        </div>
+                                        <span class="text-inverse text-opacity-40 fs-11px font-monospace">
+                                            {{ h.pct }}%
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="text-center py-5 text-inverse text-opacity-40">
+                        No completion history yet. Start checking off items!
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
+                </div>
+            </div>
+            <!-- END Completion History Card -->
+
+        </div>
+        <!-- END left column -->
+
+
+        <!-- ──────────────────── RIGHT COLUMN ───────────────────────── -->
+        <div class="col-lg-4">
+
+            <!-- ════ Routine Info Card ════════════════════════════════ -->
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center bg-inverse bg-opacity-10 fw-400">
+                    Routine Info
+                    <a href="{% url 'admin:routines_routine_change' routine.pk %}"
+                       class="ms-auto text-decoration-none text-inverse text-opacity-50 fs-12px">
+                        Edit
+                    </a>
+                </div>
+                <div class="card-body">
+
+                    <!-- Slot + Active badges -->
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        {% if routine.slot == 'morning' %}
+                        <span class="badge border border-warning text-warning px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
+                            <i class="bi bi-sunrise fs-9px me-5px"></i> Morning
+                        </span>
+                        {% elif routine.slot == 'afternoon' %}
+                        <span class="badge border border-info text-info px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
+                            <i class="bi bi-sun fs-9px me-5px"></i> Afternoon
+                        </span>
                         {% else %}
-                        <div class="text-center py-5 text-inverse text-opacity-50">
-                            No active items yet.
-                            <a href="#" class="text-warning text-decoration-none ms-1"
-                               data-bs-toggle="modal" data-bs-target="#itemModal"
-                               onclick="resetItemModal()">
-                                Add your first item →
-                            </a>
-                        </div>
+                        <span class="badge border border-primary text-primary px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
+                            <i class="bi bi-moon fs-9px me-5px"></i> Evening
+                        </span>
+                        {% endif %}
+
+                        {% if routine.is_active %}
+                        <span class="badge border border-success text-success px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
+                            <i class="fa fa-circle fs-9px fa-fw me-5px"></i> Active
+                        </span>
+                        {% else %}
+                        <span class="badge border border-secondary text-secondary px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
+                            <i class="fa fa-circle fs-9px fa-fw me-5px"></i> Inactive
+                        </span>
                         {% endif %}
                     </div>
 
-                    {% if inactive_items %}
-                    <div class="card-footer bg-none p-3 border-top border-inverse border-opacity-10">
-                        <details>
-                            <summary class="text-inverse text-opacity-40 fs-12px" style="cursor:pointer;user-select:none;">
-                                <i class="bi bi-archive me-1"></i>
-                                {{ inactive_items.count }} archived item{{ inactive_items.count|pluralize }}
-                            </summary>
-                            <table class="table table-sm mt-3 mb-0">
-                                <tbody>
-                                    {% for item in inactive_items %}
-                                    <tr>
-                                        <td class="text-inverse text-opacity-35 ps-0 border-0">{{ item.title }}</td>
-                                        <td class="text-end pe-0 border-0">
-                                            <a href="#"
-                                               class="text-warning fs-12px text-decoration-none"
-                                               onclick="toggleItemActive({{ item.pk }}, '{% url 'routines:item_toggle_active' item.pk %}'); return false;">
-                                                Restore
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </details>
+                    <!-- Day schedule pills -->
+                    <div class="mb-3">
+                        <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-bold mb-2">
+                            Schedule
+                        </div>
+                        <div class="d-flex gap-1">
+                            {% for code, label in day_abbr %}
+                            <span class="badge px-2 py-1 fs-11px rounded
+                                {% if code in routine_days %}
+                                    border border-warning text-warning
+                                {% else %}
+                                    border border-inverse border-opacity-10 text-inverse text-opacity-20
+                                {% endif %}">
+                                {{ label }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <hr class="border-inverse border-opacity-10 my-3">
+
+                    <div class="d-flex justify-content-between fs-12px mb-2">
+                        <span class="text-inverse text-opacity-50">Display Order</span>
+                        <span class="text-inverse font-monospace">{{ routine.order }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between fs-12px mb-2">
+                        <span class="text-inverse text-opacity-50">Created</span>
+                        <span class="text-inverse font-monospace">{{ routine.created_at|date:"M j, Y" }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between fs-12px">
+                        <span class="text-inverse text-opacity-50">Last Updated</span>
+                        <span class="text-inverse font-monospace">{{ routine.updated_at|date:"M j, Y" }}</span>
+                    </div>
+                </div>
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
+                </div>
+            </div>
+            <!-- END Routine Info Card -->
+
+            <!-- ════ Today's Progress Card ════════════════════════════ -->
+            <div class="card mb-4">
+                <div class="card-header bg-inverse bg-opacity-10 fw-400 d-flex align-items-center">
+                    Today's Progress
+                    {% if not routine.runs_today %}
+                    <span class="ms-2 text-inverse text-opacity-35 fs-11px">(not scheduled today)</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+
+                    <!-- Big pct + progress bar -->
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="display-6 fw-bold font-monospace lh-1
+                            {% if today_pct == 100 %}text-success{% elif today_pct > 0 %}text-warning{% else %}text-inverse text-opacity-30{% endif %}"
+                             id="todayPct">
+                            {{ today_pct }}%
+                        </div>
+                        <div class="flex-1 ms-3">
+                            <div class="progress mb-1" style="height:7px;">
+                                <div class="progress-bar
+                                    {% if today_pct == 100 %}bg-success{% else %}bg-warning{% endif %}"
+                                     id="todayProgressBar"
+                                     style="width:{{ today_pct }}%;transition:width .3s ease;">
+                                </div>
+                            </div>
+                            <div class="fs-11px text-inverse text-opacity-50 font-monospace" id="todayCount">
+                                {{ today_done }} of {{ today_total }} done
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Toggle checklist -->
+                    {% if items_data %}
+                    <div class="d-flex flex-column gap-1" id="toggleList">
+                        {% for id in items_data %}
+                        <div class="d-flex align-items-center gap-2 py-5px px-2 rounded toggle-row"
+                             style="transition:background .15s;"
+                             data-item-id="{{ id.item.pk }}"
+                             data-done="{{ id.done_today|yesno:'true,false' }}">
+                            <button type="button"
+                                    class="btn p-0 border-0 bg-none toggle-btn"
+                                    style="width:20px;height:20px;flex-shrink:0;line-height:1;"
+                                    onclick="toggleItem({{ id.item.pk }}, '{% url 'routines:item_toggle' id.item.pk %}', this)">
+                                {% if id.done_today %}
+                                <i class="bi bi-check-circle-fill text-success" style="font-size:18px;"></i>
+                                {% else %}
+                                <i class="bi bi-circle text-inverse text-opacity-25" style="font-size:18px;"></i>
+                                {% endif %}
+                            </button>
+                            <span class="fs-13px flex-1
+                                {% if id.done_today %}text-inverse text-opacity-35 text-decoration-line-through{% else %}text-inverse{% endif %}
+                                toggle-label">
+                                {{ id.item.title }}
+                            </span>
+                            {% if id.streak > 0 %}
+                            <span class="text-warning fs-11px font-monospace ms-auto">🔥{{ id.streak }}</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-inverse text-opacity-35 fs-13px text-center py-2">
+                        No items in this routine yet.
                     </div>
                     {% endif %}
 
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div>
-                        <div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div>
-                        <div class="card-arrow-bottom-right"></div>
-                    </div>
                 </div>
-                <!-- END Routine Items Card -->
-
-                <!-- ════ Completion History Card ══════════════════════ -->
-                <div class="card">
-                    <div class="card-header bg-inverse bg-opacity-10 fw-400">
-                        Completion History
-                        <span class="text-inverse text-opacity-50 fs-12px ms-1">— last 30 scheduled days</span>
-                    </div>
-                    <div class="card-body p-0">
-                        {% if history %}
-                        <table class="table table-sm m-0">
-                            <thead>
-                                <tr class="fs-12px text-inverse text-opacity-50">
-                                    <th class="border-top-0 pt-3 pb-2 ps-4">Date</th>
-                                    <th class="border-top-0 pt-3 pb-2">Day</th>
-                                    <th class="border-top-0 pt-3 pb-2">Done</th>
-                                    <th class="border-top-0 pt-3 pb-2" style="min-width:150px;">Progress</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for h in history %}
-                                <tr {% if h.is_today %}style="background:rgba(245,158,11,0.05);"{% endif %}>
-                                    <td class="ps-4 font-monospace fs-12px align-middle
-                                        {% if h.is_today %}text-warning fw-bold{% else %}text-inverse text-opacity-65{% endif %}">
-                                        {{ h.date|date:"M j, Y" }}
-                                        {% if h.is_today %}
-                                        <span class="badge bg-warning text-dark fs-9px ms-1 px-2">TODAY</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-inverse text-opacity-40 fs-12px align-middle">
-                                        {{ h.date|date:"D" }}
-                                    </td>
-                                    <td class="align-middle font-monospace fs-12px fw-semibold
-                                        {% if h.pct == 100 %}text-success{% elif h.pct > 0 %}text-warning{% else %}text-inverse text-opacity-35{% endif %}">
-                                        {{ h.done }}/{{ h.total }}
-                                    </td>
-                                    <td class="align-middle">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="progress flex-1" style="height:5px;max-width:120px;">
-                                                <div class="progress-bar
-                                                    {% if h.pct == 100 %}bg-success{% else %}bg-warning{% endif %}"
-                                                     style="width:{{ h.pct }}%;"></div>
-                                            </div>
-                                            <span class="text-inverse text-opacity-40 fs-11px font-monospace">
-                                                {{ h.pct }}%
-                                            </span>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                        {% else %}
-                        <div class="text-center py-5 text-inverse text-opacity-40">
-                            No completion history yet. Start checking off items!
-                        </div>
-                        {% endif %}
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div>
-                        <div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div>
-                        <div class="card-arrow-bottom-right"></div>
-                    </div>
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
                 </div>
-                <!-- END Completion History Card -->
-
             </div>
-            <!-- END left column -->
+            <!-- END Today's Progress Card -->
 
+            <!-- ════ Streak Card ══════════════════════════════════════ -->
+            <div class="card">
+                <div class="card-header bg-inverse bg-opacity-10 fw-400">Streak</div>
+                <div class="card-body">
 
-            <!-- ──────────────────── RIGHT COLUMN ─────────────────────── -->
-            <div class="col-lg-4">
-
-                <!-- ════ Routine Info Card ════════════════════════════ -->
-                <div class="card mb-4">
-                    <div class="card-header d-flex align-items-center bg-inverse bg-opacity-10 fw-400">
-                        Routine Info
-                        <a href="{% url 'admin:routines_routine_change' routine.pk %}"
-                           class="ms-auto text-decoration-none text-inverse text-opacity-50 fs-12px">
-                            Edit
-                        </a>
-                    </div>
-                    <div class="card-body">
-
-                        <!-- Slot + Active badges -->
-                        <div class="d-flex align-items-center gap-2 mb-3">
-                            {% if routine.slot == 'morning' %}
-                            <span class="badge border border-warning text-warning px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
-                                <i class="bi bi-sunrise fs-9px me-5px"></i> Morning
-                            </span>
-                            {% elif routine.slot == 'afternoon' %}
-                            <span class="badge border border-info text-info px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
-                                <i class="bi bi-sun fs-9px me-5px"></i> Afternoon
-                            </span>
-                            {% else %}
-                            <span class="badge border border-primary text-primary px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
-                                <i class="bi bi-moon fs-9px me-5px"></i> Evening
-                            </span>
-                            {% endif %}
-
-                            {% if routine.is_active %}
-                            <span class="badge border border-success text-success px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
-                                <i class="fa fa-circle fs-9px fa-fw me-5px"></i> Active
-                            </span>
-                            {% else %}
-                            <span class="badge border border-secondary text-secondary px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center">
-                                <i class="fa fa-circle fs-9px fa-fw me-5px"></i> Inactive
-                            </span>
-                            {% endif %}
+                    <!-- Streak counter -->
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="font-monospace fw-bold lh-1
+                            {% if streak > 0 %}text-warning{% else %}text-inverse text-opacity-25{% endif %}"
+                             style="font-size:3rem;">
+                            {% if streak > 0 %}🔥{% endif %}{{ streak }}
                         </div>
-
-                        <!-- Day schedule pills -->
-                        <div class="mb-3">
-                            <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-bold mb-2">
-                                Schedule
+                        <div class="ms-3">
+                            <div class="text-inverse fs-13px fw-semibold">
+                                {{ streak }} day{{ streak|pluralize }} streak
                             </div>
-                            <div class="d-flex gap-1">
-                                {% for code, label in day_abbr %}
-                                <span class="badge px-2 py-1 fs-11px rounded
-                                    {% if code in routine_days %}
-                                        border border-warning text-warning
-                                    {% else %}
-                                        border border-inverse border-opacity-10 text-inverse text-opacity-20
-                                    {% endif %}">
-                                    {{ label }}
-                                </span>
-                                {% endfor %}
+                            <div class="text-inverse text-opacity-40 fs-11px">
+                                consecutive fully-completed days
                             </div>
                         </div>
-
-                        <hr class="border-inverse border-opacity-10 my-3">
-
-                        <div class="d-flex justify-content-between fs-12px mb-2">
-                            <span class="text-inverse text-opacity-50">Display Order</span>
-                            <span class="text-inverse font-monospace">{{ routine.order }}</span>
-                        </div>
-                        <div class="d-flex justify-content-between fs-12px mb-2">
-                            <span class="text-inverse text-opacity-50">Created</span>
-                            <span class="text-inverse font-monospace">{{ routine.created_at|date:"M j, Y" }}</span>
-                        </div>
-                        <div class="d-flex justify-content-between fs-12px">
-                            <span class="text-inverse text-opacity-50">Last Updated</span>
-                            <span class="text-inverse font-monospace">{{ routine.updated_at|date:"M j, Y" }}</span>
-                        </div>
                     </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div>
-                        <div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div>
-                        <div class="card-arrow-bottom-right"></div>
+
+                    <!-- 5-week heatmap (7 cols × 5 rows) -->
+                    <div class="fs-11px text-inverse text-opacity-40 text-uppercase fw-bold mb-2">
+                        Last 5 Weeks
                     </div>
+                    <!-- Day-of-week header -->
+                    <div class="d-flex gap-1 mb-1">
+                        {% for code, label in day_abbr %}
+                        <div style="width:24px;text-align:center;"
+                             class="text-inverse text-opacity-25 fs-10px">
+                            {{ label }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <!-- Grid cells -->
+                    <div class="d-flex flex-wrap gap-1" style="width:196px;">
+                        {% for gd in grid_days %}
+                        <div title="{{ gd.date|date:'D, M j' }}{% if gd.pct != None %} — {{ gd.pct }}%{% else %} (not scheduled){% endif %}"
+                             style="width:24px;height:24px;border-radius:4px;
+                             {% if gd.is_today %}outline:2px solid rgba(245,158,11,.7);outline-offset:1px;{% endif %}
+                             {% if gd.pct == None %}
+                                 background:rgba(255,255,255,0.04);
+                             {% elif gd.pct == 0 %}
+                                 background:rgba(245,158,11,0.08);
+                             {% elif gd.pct < 50 %}
+                                 background:rgba(245,158,11,0.22);
+                             {% elif gd.pct < 100 %}
+                                 background:rgba(245,158,11,0.50);
+                             {% else %}
+                                 background:rgba(245,158,11,0.90);
+                             {% endif %}">
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Legend -->
+                    <div class="d-flex align-items-center gap-1 mt-2">
+                        <span class="text-inverse text-opacity-30 fs-10px me-1">Less</span>
+                        <div style="width:14px;height:14px;border-radius:3px;background:rgba(245,158,11,0.08);"></div>
+                        <div style="width:14px;height:14px;border-radius:3px;background:rgba(245,158,11,0.22);"></div>
+                        <div style="width:14px;height:14px;border-radius:3px;background:rgba(245,158,11,0.50);"></div>
+                        <div style="width:14px;height:14px;border-radius:3px;background:rgba(245,158,11,0.90);"></div>
+                        <span class="text-inverse text-opacity-30 fs-10px ms-1">More</span>
+                    </div>
+
                 </div>
-                <!-- END Routine Info Card -->
-
-                <!-- ════ Today's Progress Card ════════════════════════ -->
-                <div class="card mb-4">
-                    <div class="card-header bg-inverse bg-opacity-10 fw-400 d-flex align-items-center">
-                        Today's Progress
-                        {% if not routine.runs_today %}
-                        <span class="ms-2 text-inverse text-opacity-35 fs-11px">(not scheduled today)</span>
-                        {% endif %}
-                    </div>
-                    <div class="card-body">
-
-                        <!-- Big pct + progress bar -->
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="display-6 fw-bold font-monospace lh-1
-                                {% if today_pct == 100 %}text-success{% elif today_pct > 0 %}text-warning{% else %}text-inverse text-opacity-30{% endif %}"
-                                 id="todayPct">
-                                {{ today_pct }}%
-                            </div>
-                            <div class="flex-1 ms-3">
-                                <div class="progress mb-1" style="height:7px;">
-                                    <div class="progress-bar
-                                        {% if today_pct == 100 %}bg-success{% else %}bg-warning{% endif %}"
-                                         id="todayProgressBar"
-                                         style="width:{{ today_pct }}%;transition:width .3s ease;">
-                                    </div>
-                                </div>
-                                <div class="fs-11px text-inverse text-opacity-50 font-monospace" id="todayCount">
-                                    {{ today_done }} of {{ today_total }} done
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Toggle checklist -->
-                        {% if items_data %}
-                        <div class="d-flex flex-column gap-1" id="toggleList">
-                            {% for id in items_data %}
-                            <div class="d-flex align-items-center gap-2 py-5px px-2 rounded toggle-row"
-                                 style="transition:background .15s;"
-                                 data-item-id="{{ id.item.pk }}"
-                                 data-done="{{ id.done_today|yesno:'true,false' }}">
-                                <button type="button"
-                                        class="btn p-0 border-0 bg-none toggle-btn"
-                                        style="width:20px;height:20px;flex-shrink:0;line-height:1;"
-                                        onclick="toggleItem({{ id.item.pk }}, '{% url 'routines:item_toggle' id.item.pk %}', this)">
-                                    {% if id.done_today %}
-                                    <i class="bi bi-check-circle-fill text-success" style="font-size:18px;"></i>
-                                    {% else %}
-                                    <i class="bi bi-circle text-inverse text-opacity-25" style="font-size:18px;"></i>
-                                    {% endif %}
-                                </button>
-                                <span class="fs-13px flex-1
-                                    {% if id.done_today %}text-inverse text-opacity-35 text-decoration-line-through{% else %}text-inverse{% endif %}
-                                    toggle-label">
-                                    {{ id.item.title }}
-                                </span>
-                                {% if id.streak > 0 %}
-                                <span class="text-warning fs-11px font-monospace ms-auto">🔥{{ id.streak }}</span>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% else %}
-                        <div class="text-inverse text-opacity-35 fs-13px text-center py-2">
-                            No items in this routine yet.
-                        </div>
-                        {% endif %}
-
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div>
-                        <div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div>
-                        <div class="card-arrow-bottom-right"></div>
-                    </div>
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
                 </div>
-                <!-- END Today's Progress Card -->
-
-                <!-- ════ Streak Card ══════════════════════════════════ -->
-                <div class="card">
-                    <div class="card-header bg-inverse bg-opacity-10 fw-400">Streak</div>
-                    <div class="card-body">
-
-                        <!-- Streak counter -->
-                        <div class="d-flex align-items-center mb-4">
-                            <div class="font-monospace fw-bold lh-1
-                                {% if streak > 0 %}text-warning{% else %}text-inverse text-opacity-25{% endif %}"
-                                 style="font-size:3rem;">
-                                {% if streak > 0 %}🔥{% endif %}{{ streak }}
-                            </div>
-                            <div class="ms-3">
-                                <div class="text-inverse fs-13px fw-semibold">
-                                    {{ streak }} day{{ streak|pluralize }} streak
-                                </div>
-                                <div class="text-inverse text-opacity-40 fs-11px">
-                                    consecutive fully-completed days
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 5-week heatmap (7 cols × 5 rows) -->
-                        <div class="fs-11px text-inverse text-opacity-40 text-uppercase fw-bold mb-2">
-                            Last 5 Weeks
-                        </div>
-                        <!-- Day-of-week header -->
-                        <div class="d-flex gap-1 mb-1">
-                            {% for code, label in day_abbr %}
-                            <div style="width:24px;text-align:center;" class="text-inverse text-opacity-25 fs-10px">
-                                {{ label }}
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <!-- Grid cells -->
-                        <div class="d-flex flex-wrap gap-1" style="width:196px;">
-                            {% for gd in grid_days %}
-                            <div title="{{ gd.date|date:'D, M j' }}{% if gd.pct != None %} — {{ gd.pct }}%{% else %} (not scheduled){% endif %}"
-                                 style="width:24px;height:24px;border-radius:4px;
-                                 {% if gd.is_today %}outline:2px solid rgba(245,158,11,.7);outline-offset:1px;{% endif %}
-                                 {% if gd.pct == None %}
-                                     background:rgba(255,255,255,0.04);
-                                 {% elif gd.pct == 0 %}
-                                     background:rgba(245,158,11,0.08);
-                                 {% elif gd.pct < 50 %}
-                                     background:rgba(245,158,11,0.22);
-                                 {% elif gd.pct < 100 %}
-                                     background:rgba(245,158,11,0.50);
-                                 {% else %}
-                                     background:rgba(245,158,11,0.90);
-                                 {% endif %}">
-                            </div>
-                            {% endfor %}
-                        </div>
-
-                        <!-- Legend -->
-                        <div class="d-flex align-items-center gap-1 mt-2">
-                            <span class="text-inverse text-opacity-30 fs-10px me-1">Less</span>
-                            <div style="width:14px;height:14px;border-radius:3px;background:rgba(245,158,11,0.08);"></div>
-                            <div style="width:14px;height:14px;border-radius:3px;background:rgba(245,158,11,0.22);"></div>
-                            <div style="width:14px;height:14px;border-radius:3px;background:rgba(245,158,11,0.50);"></div>
-                            <div style="width:14px;height:14px;border-radius:3px;background:rgba(245,158,11,0.90);"></div>
-                            <span class="text-inverse text-opacity-30 fs-10px ms-1">More</span>
-                        </div>
-
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div>
-                        <div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div>
-                        <div class="card-arrow-bottom-right"></div>
-                    </div>
-                </div>
-                <!-- END Streak Card -->
-
             </div>
-            <!-- END right column -->
+            <!-- END Streak Card -->
 
         </div>
-        <!-- END row -->
+        <!-- END right column -->
 
     </div>
-    <!-- END #content -->
+    <!-- END row -->
 
-    <!-- ═══════════════════ ADD / EDIT ITEM MODAL ═════════════════════ -->
+
+    <!-- ═══════════════════ ADD / EDIT ITEM MODAL ════════════════════ -->
     <div class="modal fade" id="itemModal" tabindex="-1" aria-labelledby="itemModalLabel">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border border-inverse border-opacity-15"
@@ -661,28 +551,22 @@
     </div>
     <!-- END modal -->
 
-    <a href="#" data-toggle="scroll-to-top" class="btn-scroll-top fade">
-        <i class="fa fa-arrow-up"></i>
-    </a>
-</div>
-<!-- END #app -->
+{% endblock %}
 
-<script src="{% static 'js/vendor.min.js' %}"></script>
-<script src="{% static 'js/app.min.js' %}"></script>
+
+{% block extra_scripts %}
 <script>
-// ── Constants ──────────────────────────────────────────────────────────────
-const CSRF  = document.querySelector('meta[name="csrf-token"]').content;
-const SAVE_URL = "{% url 'routines:item_save' routine.pk %}";
+var CSRF     = document.querySelector('meta[name="csrf-token"]').content;
+var SAVE_URL = "{% url 'routines:item_save' routine.pk %}";
 
-// ── Toggle item completion (Today's Progress checklist) ────────────────────
+/* ── Toggle item completion (Today's Progress checklist) ──────────────── */
 function toggleItem(itemId, url, btn) {
     fetch(url, {
         method: 'POST',
         headers: { 'X-CSRFToken': CSRF },
     })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        // Update the toggle button icon
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
         var icon = btn.querySelector('i');
         var row  = btn.closest('.toggle-row');
         var lbl  = row.querySelector('.toggle-label');
@@ -699,28 +583,22 @@ function toggleItem(itemId, url, btn) {
             lbl.classList.add('text-inverse');
         }
 
-        // Update progress counter + bar
-        var pct     = data.routine_pct;
-        var pctEl   = document.getElementById('todayPct');
-        var barEl   = document.getElementById('todayProgressBar');
-        var cntEl   = document.getElementById('todayCount');
+        var pct   = data.routine_pct;
+        var pctEl = document.getElementById('todayPct');
+        var barEl = document.getElementById('todayProgressBar');
+        var cntEl = document.getElementById('todayCount');
 
-        pctEl.textContent  = pct + '%';
-        barEl.style.width  = pct + '%';
-        cntEl.textContent  = data.routine_done + ' of ' + data.routine_total + ' done';
+        pctEl.textContent = pct + '%';
+        barEl.style.width = pct + '%';
+        cntEl.textContent = data.routine_done + ' of ' + data.routine_total + ' done';
 
-        // Swap pct color
-        pctEl.className = pctEl.className.replace(/text-(success|warning|inverse)[^\s]*/g, '');
         if (pct === 100) {
-            pctEl.classList.add('text-success');
-            barEl.className = barEl.className.replace('bg-warning', 'bg-success');
+            pctEl.className = pctEl.className.replace(/text-(success|warning|inverse)[^\s]*/g, '') + ' text-success';
+            barEl.classList.replace('bg-warning', 'bg-success');
         } else if (pct > 0) {
-            pctEl.classList.add('text-warning');
-        } else {
-            pctEl.classList.add('text-inverse', 'text-opacity-30');
+            pctEl.className = pctEl.className.replace(/text-(success|warning|inverse)[^\s]*/g, '') + ' text-warning';
         }
 
-        // Mirror the done-today icon in the items table
         var tableCell = document.getElementById('table-icon-' + itemId);
         if (tableCell) {
             tableCell.innerHTML = data.done
@@ -728,16 +606,16 @@ function toggleItem(itemId, url, btn) {
                 : '<i class="bi bi-circle text-inverse text-opacity-20 fs-16px"></i>';
         }
     })
-    .catch(function(err) { console.error('Toggle failed:', err); });
+    .catch(function (err) { console.error('Toggle failed:', err); });
 }
 
-// ── Add / Edit item modal helpers ──────────────────────────────────────────
+/* ── Add / Edit item modal ────────────────────────────────────────────── */
 function resetItemModal() {
     document.getElementById('itemModalLabel').textContent = 'Add Routine Item';
-    document.getElementById('editItemId').value  = '';
-    document.getElementById('itemTitle').value   = '';
+    document.getElementById('editItemId').value   = '';
+    document.getElementById('itemTitle').value    = '';
     document.getElementById('itemCategory').value = '';
-    document.getElementById('itemOrder').value   = '0';
+    document.getElementById('itemOrder').value    = '0';
     document.getElementById('itemSaveError').classList.add('d-none');
 }
 
@@ -750,7 +628,7 @@ function openEditModal(itemId, title, category, order) {
     document.getElementById('itemSaveError').classList.add('d-none');
 }
 
-// ── Save item (create or update) ───────────────────────────────────────────
+/* ── Save item (create or update) ────────────────────────────────────── */
 function saveItem() {
     var itemId   = document.getElementById('editItemId').value;
     var title    = document.getElementById('itemTitle').value.trim();
@@ -763,63 +641,45 @@ function saveItem() {
         errEl.classList.remove('d-none');
         return;
     }
-
     errEl.classList.add('d-none');
 
     fetch(SAVE_URL, {
         method: 'POST',
-        headers: {
-            'X-CSRFToken': CSRF,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            item_id:  itemId || null,
-            title:    title,
-            category: category,
-            order:    order,
-        }),
+        headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemId || null, title: title, category: category, order: order }),
     })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
         if (data.error) {
             errEl.textContent = data.error;
             errEl.classList.remove('d-none');
             return;
         }
-        // Reload to reflect the new/updated item in both the table and toggle list
         window.location.reload();
     })
-    .catch(function(err) {
+    .catch(function (err) {
         errEl.textContent = 'Something went wrong. Please try again.';
         errEl.classList.remove('d-none');
         console.error('Save failed:', err);
     });
 }
 
-// ── Toggle item active / inactive ─────────────────────────────────────────
+/* ── Toggle item active / inactive ───────────────────────────────────── */
 function toggleItemActive(itemId, url) {
     fetch(url, {
         method: 'POST',
         headers: { 'X-CSRFToken': CSRF },
     })
-    .then(function(r) { return r.json(); })
-    .then(function() {
-        // Reload to move the item between active and archived sections
-        window.location.reload();
-    })
-    .catch(function(err) { console.error('Toggle active failed:', err); });
+    .then(function (r) { return r.json(); })
+    .then(function () { window.location.reload(); })
+    .catch(function (err) { console.error('Toggle active failed:', err); });
 }
 
-// Reset modal fields when it's opened for a new item via the header link
-document.getElementById('itemModal').addEventListener('show.bs.modal', function(e) {
-    // Only reset if not triggered by an edit button (edit buttons call openEditModal first)
-    if (!e.relatedTarget || !e.relatedTarget.hasAttribute('data-item-id')) {
-        // Check if editItemId is empty — if so, it's a "new item" open
-        if (!document.getElementById('editItemId').value) {
-            resetItemModal();
-        }
+/* Reset modal on fresh open (not triggered by an edit button) */
+document.getElementById('itemModal').addEventListener('show.bs.modal', function () {
+    if (!document.getElementById('editItemId').value) {
+        resetItemModal();
     }
 });
 </script>
-</body>
-</html>
+{% endblock %}

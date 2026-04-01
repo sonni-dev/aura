@@ -3,8 +3,9 @@
 <html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="utf-8">
-    <title>aura — HUD</title>
+    <title>{% block title %}Aura{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token }}">
 
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
@@ -17,24 +18,20 @@
     <link href="{% static 'css/vendor.min.css' %}" rel="stylesheet">
     <link href="{% static 'css/app.min.css' %}" rel="stylesheet">
 
-    <!-- ApexCharts -->
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-
+    <!-- ── Aura base styles (shared across all pages) ─────────────────── -->
     <style>
-        /* ── Aura overrides ── */
         :root {
             --bs-font-sans-serif: 'Rajdhani', system-ui, sans-serif;
         }
 
-        /* Clock / weather widget in header */
+        /* ── Header clock / weather widget ──────────────────────────────── */
         .hud-clock-widget {
             display: flex;
             align-items: center;
             gap: 20px;
             padding: 0 12px;
-            border-left: 1px solid rgba(255,255,255,0.08);
+            border-left: 1px solid rgba(255, 255, 255, 0.08);
         }
-
         .hud-time {
             font-family: 'JetBrains Mono', monospace;
             font-size: 18px;
@@ -43,562 +40,34 @@
             color: var(--bs-theme);
             line-height: 1.1;
         }
-
         .hud-date {
             font-family: 'JetBrains Mono', monospace;
             font-size: 9px;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            color: rgba(255,255,255,0.4);
+            color: rgba(255, 255, 255, 0.4);
             line-height: 1.2;
             margin-top: 2px;
         }
-
-        .hud-weather-icon {
-            font-size: 22px;
-            line-height: 1;
-        }
-
+        .hud-weather-icon { font-size: 22px; line-height: 1; }
         .hud-weather-temp {
             font-family: 'JetBrains Mono', monospace;
             font-size: 15px;
             font-weight: 500;
-            color: rgba(255,255,255,0.85);
+            color: rgba(255, 255, 255, 0.85);
             line-height: 1.1;
         }
-
         .hud-weather-desc {
             font-size: 9px;
             letter-spacing: 0.06em;
             text-transform: uppercase;
-            color: rgba(255,255,255,0.35);
+            color: rgba(255, 255, 255, 0.35);
             line-height: 1.2;
         }
+    </style>
 
-        /* Routine item checklist */
-        .routine-item-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 4px 0;
-            font-size: 12px;
-        }
-
-        .routine-item-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            flex-shrink: 0;
-            border: 1px solid var(--bs-theme);
-            background: transparent;
-        }
-
-        .routine-item-dot.done {
-            background: var(--bs-theme);
-        }
-
-        .routine-item-label {
-            flex: 1;
-            color: rgba(255,255,255,0.7);
-        }
-
-        .routine-item-label.done {
-            color: rgba(255,255,255,0.3);
-            text-decoration: line-through;
-        }
-
-        /* Habit week dot grid */
-        .habit-week-dots {
-            display: flex;
-            gap: 3px;
-            align-items: center;
-        }
-
-        .habit-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 2px;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-
-        .habit-dot.logged {
-            background: var(--bs-theme);
-            border-color: var(--bs-theme);
-        }
-
-        .habit-dot.missed {
-            background: rgba(255,80,80,0.25);
-            border-color: rgba(255,80,80,0.2);
-        }
-
-        /* Priority badges */
-        .priority-high   { color: #ef4444; }
-        .priority-medium { color: var(--bs-theme); }
-        .priority-low    { color: rgba(255,255,255,0.3); }
-
-        /* Stalled badge */
-        .badge-stalled {
-            background: rgba(239,68,68,0.15);
-            color: #ef4444;
-            border: 1px solid rgba(239,68,68,0.3);
-        }
-
-        /* Overdue row */
-        .task-overdue { border-left: 2px solid #ef4444; padding-left: 8px; }
-        .task-today   { border-left: 2px solid var(--bs-theme); padding-left: 8px; }
-
-        /* Goal color tiers */
-        .goal-pct-high   { color: var(--bs-theme); }
-        .goal-pct-medium { color: #f59e0b; }
-        .goal-pct-low    { color: #ef4444; }
-
-        /* Sidebar brand tweaks */
-        .brand-img-text { font-family: 'Rajdhani', sans-serif !important; font-weight: 700; }
-
-        /* Empty state */
-        .hud-empty {
-            text-align: center;
-            padding: 24px;
-            color: rgba(255,255,255,0.2);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 11px;
-            letter-spacing: 0.06em;
-        }
-
-    /* ── Source-colour strips used in Look at the Day & Upcoming Soon ── */
-    .sched-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        padding: 7px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-    .sched-item:last-child { border-bottom: 0; }
- 
-    .sched-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        flex-shrink: 0;
-        margin-top: 4px;
-    }
-    .sched-dot-task     { background: var(--bs-theme); }
-    .sched-dot-routine  { background: var(--bs-warning); }
-    .sched-dot-goal     { background: var(--bs-info); }
-    .sched-dot-goal_item{ background: #a855f7; }  /* purple */
-    .sched-dot-habit    { background: #ec4899; }  /* pink */
- 
-    .sched-title {
-        font-size: 12px;
-        line-height: 1.3;
-        color: rgba(255,255,255,0.85);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .sched-title.is-done {
-        text-decoration: line-through;
-        color: rgba(255,255,255,0.3);
-    }
-    .sched-meta {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-top: 3px;
-        flex-wrap: wrap;
-    }
-    .sched-badge {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        letter-spacing: 0.04em;
-        padding: 1px 5px 2px;
-        border-radius: 0;
-        line-height: 1.5;
-    }
-    .sched-badge-task      { background:rgba( 12,208,150,0.12); color:var(--bs-theme); }
-    .sched-badge-routine   { background:rgba(255,167,  0,0.12); color:var(--bs-warning); }
-    .sched-badge-goal      { background:rgba( 48,190,255,0.12); color:var(--bs-info); }
-    .sched-badge-goal_item { background:rgba(168, 85,247,0.12); color:#a855f7; }
-    .sched-badge-habit     { background:rgba(236, 72,153,0.12); color:#ec4899; }
- 
-    .sched-time {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        letter-spacing: 0.04em;
-        color: rgba(255,255,255,0.3);
-    }
-    .sched-time.is-overdue { color: var(--bs-danger); }
-    .sched-time.is-logged  { color: var(--bs-theme); }
- 
-    .sched-pct {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        color: rgba(255,255,255,0.35);
-        margin-left: auto;
-        flex-shrink: 0;
-    }
- 
-    .sched-done-icon {
-        flex-shrink: 0;
-        font-size: 11px;
-        margin-top: 1px;
-        color: var(--bs-theme);
-    }
- 
-    /* Scrollable content area for tall cards */
-    .hud-scroll-area {
-        overflow-y: auto;
-        overflow-x: hidden;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(255,255,255,0.1) transparent;
-    }
-    .hud-scroll-area::-webkit-scrollbar { width: 3px; }
-    .hud-scroll-area::-webkit-scrollbar-track { background: transparent; }
-    .hud-scroll-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
- 
-    /* Days-until pill for Upcoming Soon */
-    .days-pill {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        letter-spacing: 0.06em;
-        padding: 1px 6px 2px;
-        border-radius: 0;
-        flex-shrink: 0;
-        min-width: 36px;
-        text-align: center;
-    }
-    .days-pill-1  { background:rgba(255, 59,48,0.15); color:#ff3b30; }
-    .days-pill-3  { background:rgba(255,149, 0,0.15); color:var(--bs-warning); }
-    .days-pill-7  { background:rgba(255,204, 0,0.15); color:var(--bs-yellow); }
-    .days-pill-14 { background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.45); }
- 
-    /* ── Mini Calendar ─────────────────────────────────────────────── */
-    .mini-cal-grid {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 1px;
-        text-align: center;
-    }
-    .cal-day-header {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 8px;
-        color: rgba(255,255,255,0.25);
-        letter-spacing: 0.06em;
-        padding: 3px 0 5px;
-    }
-    .cal-day-cell {
-        padding: 2px 1px;
-        min-height: 30px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    .cal-day-num {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 10px;
-        color: rgba(255,255,255,0.55);
-        line-height: 1.6;
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        transition: background 0.15s;
-    }
-    .cal-day-cell.cal-today .cal-day-num {
-        background: rgba(12,208,150,0.18);
-        color: var(--bs-theme);
-        font-weight: 600;
-    }
-    .cal-day-cell.cal-other-month .cal-day-num {
-        color: rgba(255,255,255,0.15);
-    }
-    .cal-dots {
-        display: flex;
-        justify-content: center;
-        gap: 2px;
-        margin-top: 1px;
-    }
-    .cal-dot {
-        width: 4px;
-        height: 4px;
-        border-radius: 50%;
-        display: inline-block;
-    }
-    .cal-dot-task     { background: var(--bs-theme); }
-    .cal-dot-goal     { background: var(--bs-info); }
-    .cal-dot-reminder { background: var(--bs-warning); }
- 
-    .cal-nav-btn {
-        background: none;
-        border: none;
-        color: rgba(255,255,255,0.35);
-        padding: 0 4px;
-        cursor: pointer;
-        font-size: 11px;
-        line-height: 1;
-        transition: color 0.15s;
-    }
-    .cal-nav-btn:hover { color: rgba(255,255,255,0.8); }
-
- 
-    /* ── Fixed-height stat cards (Row 1) ─────────────────────────────── */
-    .stat-card-fixed {
-        height: 140px;          /* tweak if content overflows */
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
- 
-    /* ── Routine slot section header ──────────────────────────────────── */
-    .routine-slot-header {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 6px 0 5px;
-        margin-bottom: 4px;
-        border-bottom: 1px solid rgba(255,255,255,0.08);
-    }
-    .routine-slot-label {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        letter-spacing: 0.12em;
-        color: var(--bs-warning);
-        font-weight: 600;
-    }
-    .routine-slot-meta {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        color: rgba(255,255,255,0.25);
-        letter-spacing: 0.04em;
-    }
-    .routine-slot-hr {
-        flex: 1;
-        height: 1px;
-        background: rgba(255,167,0,0.15);
-        border: none;
-    }
- 
-    /* ── Individual routine block within a slot ───────────────────────── */
-    .routine-block {
-        margin-bottom: 14px;
-    }
-    .routine-block:last-child { margin-bottom: 0; }
- 
-    .routine-block-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 5px 0 4px;
-    }
-    .routine-block-name {
-        font-size: 12px;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        color: rgba(255,255,255,0.85);
-        flex: 1;
-    }
-    .routine-block-pct {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 10px;
-        min-width: 34px;
-        text-align: right;
-        font-weight: 600;
-        transition: color 0.2s;
-    }
-    .routine-block-pct.is-complete { color: var(--bs-theme); }
-    .routine-block-pct.is-partial  { color: var(--bs-warning); }
-    .routine-block-pct.is-empty    { color: rgba(255,255,255,0.3); }
- 
-    .routine-streak {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 8px;
-        letter-spacing: 0.05em;
-        padding: 1px 5px 2px;
-        background: rgba(255,255,255,0.06);
-        color: rgba(255,255,255,0.35);
-        border-radius: 0;
-        flex-shrink: 0;
-    }
- 
-    /* ── Routine item rows ────────────────────────────────────────────── */
-    .rt-item-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 4px 2px 4px 10px;
-        border-radius: 0;
-        cursor: pointer;
-        transition: background 0.12s;
-        user-select: none;
-    }
-    .rt-item-row:hover { background: rgba(255,255,255,0.04); }
- 
-    .rt-item-check {
-        width: 14px;
-        height: 14px;
-        border-radius: 2px;
-        border: 1.5px solid rgba(255,255,255,0.2);
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.15s;
-        font-size: 9px;
-        color: transparent;
-    }
-    .rt-item-row.is-done .rt-item-check {
-        background: var(--bs-theme);
-        border-color: var(--bs-theme);
-        color: rgba(0,0,0,0.8);
-    }
-    .rt-item-row.is-done .rt-item-check::after {
-        content: '✓';
-        font-size: 9px;
-        font-weight: 700;
-    }
- 
-    .rt-item-cat {
-        width: 5px;
-        height: 5px;
-        border-radius: 50%;
-        flex-shrink: 0;
-        background: rgba(255,255,255,0.2);
-    }
- 
-    .rt-item-title {
-        font-size: 12px;
-        color: rgba(255,255,255,0.75);
-        flex: 1;
-        transition: all 0.15s;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .rt-item-row.is-done .rt-item-title {
-        color: rgba(255,255,255,0.25);
-        text-decoration: line-through;
-    }
- 
-    /* Loading/spinner state while toggling */
-    .rt-item-row.is-loading .rt-item-check {
-        border-color: rgba(255,255,255,0.4);
-        animation: rt-pulse 0.6s ease-in-out infinite alternate;
-    }
-    @keyframes rt-pulse {
-        from { opacity: 0.4; }
-        to   { opacity: 1;   }
-    }
- 
-    /* Progress bar under routine name */
-    .routine-progress-bar {
-        height: 2px;
-        background: rgba(255,255,255,0.07);
-        margin: 3px 0 8px;
-        overflow: hidden;
-    }
-    .routine-progress-fill {
-        height: 100%;
-        background: var(--bs-warning);
-        transition: width 0.3s ease;
-    }
-    .routine-progress-fill.complete { background: var(--bs-theme); }
- 
-    /* Category dot colours */
-    .cat-body        { background: #60a5fa; }
-    .cat-self_care   { background: #f472b6; }
-    .cat-hygiene     { background: #a78bfa; }
-    .cat-food        { background: #fb923c; }
-    .cat-work        { background: #38bdf8; }
-    .cat-code        { background: var(--bs-theme); }
-    .cat-cleaning    { background: #94a3b8; }
-    .cat-pet         { background: #fbbf24; }
-    .cat-bedtime     { background: #818cf8; }
-    .cat-wakeup      { background: #fde68a; }
-    .cat-other       { background: rgba(255,255,255,0.2); }
- 
-    /* ── Goal progress compact table ──────────────────────────────────── */
-    .goal-row {
-        padding: 7px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-    .goal-row:last-child { border-bottom: 0; }
-    .goal-row-name {
-        font-size: 12px;
-        color: rgba(255,255,255,0.82);
-        margin-bottom: 4px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .goal-row-meta {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .goal-bar-wrap {
-        flex: 1;
-        height: 3px;
-        background: rgba(255,255,255,0.07);
-        overflow: hidden;
-    }
-    .goal-bar-fill {
-        height: 100%;
-        transition: width 0.3s;
-    }
-    .goal-bar-fill.hi   { background: var(--bs-theme); }
-    .goal-bar-fill.mid  { background: var(--bs-warning); }
-    .goal-bar-fill.lo   { background: #f87171; }
-    .goal-pct-label {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        min-width: 28px;
-        text-align: right;
-        flex-shrink: 0;
-    }
-    .goal-pct-label.hi  { color: var(--bs-theme); }
-    .goal-pct-label.mid { color: var(--bs-warning); }
-    .goal-pct-label.lo  { color: #f87171; }
- 
-    /* ── Open Tasks compact list ────────────────────────────────────────── */
-    .task-row {
-        display: flex;
-        align-items: baseline;
-        gap: 8px;
-        padding: 5px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-        font-size: 12px;
-    }
-    .task-row:last-child { border-bottom: 0; }
-    .task-row-dot {
-        width: 5px;
-        height: 5px;
-        border-radius: 50%;
-        flex-shrink: 0;
-        margin-top: 4px;
-    }
-    .task-row-dot.p-critical { background: #f87171; }
-    .task-row-dot.p-high     { background: var(--bs-warning); }
-    .task-row-dot.p-medium   { background: var(--bs-theme); }
-    .task-row-dot.p-low      { background: rgba(255,255,255,0.25); }
-    .task-row-name {
-        flex: 1;
-        color: rgba(255,255,255,0.78);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    .task-row-date {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        color: rgba(255,255,255,0.28);
-        flex-shrink: 0;
-    }
-    .task-row-date.overdue { color: #f87171; }
- 
-</style>
+    {# ── Page-specific CSS, fonts, or JS imports go here ─────────────── #}
+    {% block extra_head %}{% endblock %}
 </head>
 
 <body>
@@ -611,9 +80,9 @@
         <!-- desktop sidebar toggle -->
         <div class="desktop-toggler">
             <button type="button" class="menu-toggler"
-                data-toggle-class="app-sidebar-collapsed"
-                data-dismiss-class="app-sidebar-toggled"
-                data-toggle-target=".app">
+                    data-toggle-class="app-sidebar-collapsed"
+                    data-dismiss-class="app-sidebar-toggled"
+                    data-toggle-target=".app">
                 <span class="bar"></span>
                 <span class="bar"></span>
                 <span class="bar"></span>
@@ -623,8 +92,8 @@
         <!-- mobile sidebar toggle -->
         <div class="mobile-toggler">
             <button type="button" class="menu-toggler"
-                data-toggle-class="app-sidebar-mobile-toggled"
-                data-toggle-target=".app">
+                    data-toggle-class="app-sidebar-mobile-toggled"
+                    data-toggle-target=".app">
                 <span class="bar"></span>
                 <span class="bar"></span>
                 <span class="bar"></span>
@@ -637,22 +106,25 @@
                 <span class="brand-img">
                     <span class="brand-img-text text-theme">A</span>
                 </span>
-                <span class="brand-text" style="font-family:'Rajdhani',sans-serif; letter-spacing:0.06em;">AURA</span>
+                <span class="brand-text"
+                      style="font-family:'Rajdhani',sans-serif; letter-spacing:0.06em;">AURA</span>
             </a>
         </div>
 
-        <!-- right-side menu -->
+        <!-- right-side header menu -->
         <div class="menu">
 
-            <!-- Reminders bell -->
+            <!-- ── Reminders bell ─────────────────────────────────────── -->
             <div class="menu-item dropdown dropdown-mobile-full">
-                <a href="#" data-bs-toggle="dropdown" data-bs-display="static" class="menu-link" role="button" aria-expanded="false">
+                <a href="#" data-bs-toggle="dropdown" data-bs-display="static"
+                   class="menu-link" role="button" aria-expanded="false">
                     <div class="menu-icon"><i class="bi bi-bell nav-icon"></i></div>
                     {% if due_reminders_count > 0 %}
                     <div class="menu-badge bg-theme"></div>
                     {% endif %}
                 </a>
-                <div class="dropdown-menu dropdown-menu-end mt-1 w-300px fs-11px pt-1" data-bs-popper="static">
+                <div class="dropdown-menu dropdown-menu-end mt-1 w-300px fs-11px pt-1"
+                     data-bs-popper="static">
                     <h6 class="dropdown-header fs-10px mb-1">DUE REMINDERS</h6>
                     <div class="dropdown-divider mt-1"></div>
                     {% for r in due_reminders %}
@@ -683,12 +155,13 @@
                 </div>
             </div>
 
-            <!-- Clock / Date / Weather — replaces profile image -->
+            <!-- ── Clock / Date / Weather widget ─────────────────────── -->
             <div class="menu-item">
                 <div class="hud-clock-widget">
                     <div>
                         <div class="hud-time" id="hud-clock">--:--:--</div>
-                        <div class="hud-date" id="hud-date">{{ today|date:"l, N j" }}</div>
+                        {# today is set by JS below as a fallback; HudView also passes it server-side #}
+                        <div class="hud-date" id="hud-date">{% if today %}{{ today|date:"l, N j" }}{% endif %}</div>
                     </div>
                     <div class="text-end">
                         <div class="hud-weather-icon" id="hud-weather-icon">⬡</div>
@@ -699,18 +172,25 @@
             </div>
 
         </div>
-        <!-- END menu -->
+        <!-- END header menu -->
     </div>
     <!-- END #header -->
 
+
     <!-- ═══════════════════════════════ SIDEBAR ══════════════════════════ -->
+    {% comment %} {#
+       Active state: driven by request.resolver_match.app_name.
+       Each app's urls.py must declare app_name = 'appname'.
+       Badge counts (tasks_todo_count, etc.) are only set in HudView context;
+       on other pages they evaluate to 0 and the badges simply don't render.
+    #} {% endcomment %}
     <div id="sidebar" class="app-sidebar">
         <div class="app-sidebar-content" data-scrollbar="true" data-height="100%">
             <div class="menu">
 
                 <div class="menu-header">Mission Control</div>
 
-                <div class="menu-item active">
+                <div class="menu-item {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
                     <a href="{% url 'dashboard:hud' %}" class="menu-link">
                         <span class="menu-icon"><i class="bi bi-cpu"></i></span>
                         <span class="menu-text">Dashboard</span>
@@ -719,8 +199,9 @@
 
                 <div class="menu-header">Data</div>
 
-                <div class="menu-item">
-                    <a href="#" class="menu-link">
+                {# TODO: swap href to {% url 'tasks:list' %} once tasks pages exist #}
+                <div class="menu-item {% if request.resolver_match.app_name == 'tasks' %}active{% endif %}">
+                    <a href="{% url 'admin:tasks_task_changelist' %}" class="menu-link">
                         <span class="menu-icon"><i class="bi bi-check2-square"></i></span>
                         <span class="menu-text">Tasks</span>
                         {% if tasks_todo_count > 0 %}
@@ -729,8 +210,8 @@
                     </a>
                 </div>
 
-                <div class="menu-item">
-                    <a href="#" class="menu-link">
+                <div class="menu-item {% if request.resolver_match.app_name == 'routines' %}active{% endif %}">
+                    <a href="{% url 'routines:list' %}" class="menu-link">
                         <span class="menu-icon"><i class="bi bi-arrow-repeat"></i></span>
                         <span class="menu-text">Routines</span>
                         {% if routines_today_count > 0 %}
@@ -739,8 +220,9 @@
                     </a>
                 </div>
 
-                <div class="menu-item">
-                    <a href="#" class="menu-link">
+                {# TODO: swap href to {% url 'goals:list' %} once goals pages exist #}
+                <div class="menu-item {% if request.resolver_match.app_name == 'goals' %}active{% endif %}">
+                    <a href="{% url 'admin:goals_goal_changelist' %}" class="menu-link">
                         <span class="menu-icon"><i class="bi bi-bullseye"></i></span>
                         <span class="menu-text">Goals</span>
                         {% if goals_count > 0 %}
@@ -749,8 +231,9 @@
                     </a>
                 </div>
 
-                <div class="menu-item">
-                    <a href="#" class="menu-link">
+                {# TODO: swap href to {% url 'habits:list' %} once habits pages exist #}
+                <div class="menu-item {% if request.resolver_match.app_name == 'habits' %}active{% endif %}">
+                    <a href="{% url 'admin:habits_habit_changelist' %}" class="menu-link">
                         <span class="menu-icon"><i class="bi bi-graph-up"></i></span>
                         <span class="menu-text">Habits</span>
                         {% if habits_count > 0 %}
@@ -759,8 +242,9 @@
                     </a>
                 </div>
 
-                <div class="menu-item">
-                    <a href="#" class="menu-link">
+                {# TODO: swap href to {% url 'reminders:list' %} once reminders pages exist #}
+                <div class="menu-item {% if request.resolver_match.app_name == 'reminders' %}active{% endif %}">
+                    <a href="{% url 'admin:reminders_reminder_changelist' %}" class="menu-link">
                         <span class="menu-icon"><i class="bi bi-bell"></i></span>
                         <span class="menu-text">Reminders</span>
                         {% if due_reminders_count > 0 %}
@@ -773,15 +257,15 @@
                 <div class="menu-header">Quick Add</div>
 
                 <div class="menu-item">
-                    {% comment %} <a href="{% url 'admin:tasks_task_add' %}" class="menu-link"> {% endcomment %}
-                        <a href="" class="menu-link">
+                    {# TODO: {% url 'admin:tasks_task_add' %} #}
+                    <a href="" class="menu-link">
                         <span class="menu-icon"><i class="bi bi-plus-circle"></i></span>
                         <span class="menu-text">New Task</span>
                     </a>
                 </div>
 
                 <div class="menu-item">
-                    {% comment %} <a href="{% url 'admin:goals_goalitem_add' %}" class="menu-link"> {% endcomment %}
+                    {# TODO: {% url 'admin:goals_goalitem_add' %} #}
                     <a href="" class="menu-link">
                         <span class="menu-icon"><i class="bi bi-plus-circle"></i></span>
                         <span class="menu-text">New Goal Item</span>
@@ -792,18 +276,19 @@
                 <div class="menu-header">Admin</div>
 
                 <div class="menu-item">
-                    {% comment %} <a href="{% url 'admin:index' %}" class="menu-link"> {% endcomment %}
-                    <a href="" class="menu-link">
+                    <a href="{% url 'admin:index' %}" class="menu-link">
                         <span class="menu-icon"><i class="bi bi-sliders"></i></span>
                         <span class="menu-text">Admin Panel</span>
                     </a>
                 </div>
 
             </div>
+
             <!-- version stamp -->
             <div class="p-3 px-4 mt-auto">
-                <div class="text-inverse text-opacity-25 fs-10px" style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">
-                    AURA v2.0 &middot; {{ today|date:"Y" }}
+                <div class="text-inverse text-opacity-25 fs-10px"
+                     style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">
+                    AURA v2.0 &middot; {% now "Y" %}
                 </div>
             </div>
         </div>
@@ -812,935 +297,105 @@
 
     <!-- mobile sidebar backdrop -->
     <button class="app-sidebar-mobile-backdrop"
-        data-toggle-target=".app"
-        data-toggle-class="app-sidebar-mobile-toggled"></button>
+            data-toggle-target=".app"
+            data-toggle-class="app-sidebar-mobile-toggled"></button>
+
 
     <!-- ═══════════════════════════════ CONTENT ══════════════════════════ -->
     <div id="content" class="app-content">
+        {% block content %}{% endblock %}
+    </div>
+    <!-- END #content -->
 
-        <!-- ── Page title ────────────────────────────────────────────────── -->
-        <div class="d-flex align-items-center mb-3">
-            <div>
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="#">AURA</a></li>
-                    <li class="breadcrumb-item active">DASHBOARD</li>
-                </ol>
-                <h1 class="page-header mb-0" style="font-family:'Rajdhani',sans-serif; font-weight:600; letter-spacing:0.04em;">
-                    Mission Control
-                    <small class="ms-2 text-inverse text-opacity-40 fs-14px fw-normal" style="font-family:'JetBrains Mono',monospace;">{{ today|date:"l" }}</small>
-                </h1>
-            </div>
-        </div>
 
-         <!-- ── ROW 1 — Four stat cards (fixed height) ─────────────────── -->
-        <div class="row row-cols-xl-4 row-cols-lg-2 g-0 mb-0">
- 
-            <!-- TASKS DUE -->
-            <div class="col pe-0 ps-0">
-                <div class="card mb-3 me-3">
-                    <div class="card-body stat-card-fixed">
-                        <div class="d-flex fw-bold small mb-2">
-                            <span class="flex-grow-1">TASKS DUE</span>
-                            {% if tasks_overdue_count > 0 %}
-                            <span class="badge bg-danger bg-opacity-20 text-danger rounded-0 fs-9px">{{ tasks_overdue_count }} OVERDUE</span>
-                            {% endif %}
-                        </div>
-                        <div class="row align-items-center">
-                            <div class="col-7">
-                                <h3 class="mb-0">{{ tasks_due_count }}</h3>
-                            </div>
-                            <div class="col-5">
-                                <div id="chart-tasks-due" class="mt-n2"></div>
-                            </div>
-                        </div>
-                        <div class="small text-inverse text-opacity-50 text-truncate mt-auto">
-                            <i class="bi bi-circle-fill fs-6px me-1 text-theme"></i> {{ tasks_due_today.count }} today &nbsp;&middot;&nbsp;
-                            <i class="bi bi-circle-fill fs-6px me-1 text-inverse text-opacity-25"></i> {{ tasks_in_progress }} in progress
-                        </div>
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
-                    </div>
-                </div>
-            </div>
- 
-            <!-- ROUTINES -->
-            <div class="col pe-0 ps-0">
-                <div class="card mb-3 me-3">
-                    <div class="card-body stat-card-fixed">
-                        <div class="d-flex fw-bold small mb-2">
-                            <span class="flex-grow-1">ROUTINES</span>
-                            <span class="text-theme">{{ routine_done }}/{{ routine_total }}</span>
-                        </div>
-                        <div class="row align-items-center">
-                            <div class="col-7">
-                                <h3 class="mb-0">{{ routine_pct }}<small class="fs-14px text-inverse text-opacity-40">%</small></h3>
-                            </div>
-                            <div class="col-5">
-                                <div id="chart-routines" class="mt-n3 mb-n2"></div>
-                            </div>
-                        </div>
-                        <div class="small text-inverse text-opacity-50 text-truncate mt-auto">
-                            <i class="bi bi-arrow-repeat fs-6px me-1 text-warning"></i> {{ routines_today_count }} routine{{ routines_today_count|pluralize }} today
-                        </div>
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
-                    </div>
-                </div>
-            </div>
- 
-            <!-- GOALS -->
-            <div class="col pe-0 ps-0">
-                <div class="card mb-3 me-3">
-                    <div class="card-body stat-card-fixed">
-                        <div class="d-flex fw-bold small mb-2">
-                            <span class="flex-grow-1">GOALS</span>
-                        </div>
-                        <div class="row align-items-center">
-                            <div class="col-7">
-                                <h3 class="mb-0">{{ goals_count }}</h3>
-                            </div>
-                            <div class="col-5">
-                                <div id="chart-goals" class="mt-n3 mb-n2"></div>
-                            </div>
-                        </div>
-                        <div class="small text-inverse text-opacity-50 text-truncate mt-auto">
-                            {% for g in goals_data|slice:":2" %}
-                            <i class="bi bi-circle-fill fs-6px me-1
-                                {% if g.pct >= 75 %}text-theme{% elif g.pct >= 40 %}text-warning{% else %}text-danger{% endif %}"></i>{{ g.goal.name|truncatechars:18 }}<br>
-                            {% empty %}<i class="bi bi-plus-circle me-1"></i> No active goals{% endfor %}
-                        </div>
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
-                    </div>
-                </div>
-            </div>
- 
-            <!-- HABITS -->
-            <div class="col pe-0 ps-0">
-                <div class="card mb-3">
-                    <div class="card-body stat-card-fixed">
-                        <div class="d-flex fw-bold small mb-2">
-                            <span class="flex-grow-1">HABITS</span>
-                            <span class="text-inverse text-opacity-50">{{ habits_logged_today }}/{{ habits_count }}</span>
-                        </div>
-                        <div class="row align-items-center">
-                            <div class="col-7">
-                                <h3 class="mb-0">{{ habits_logged_today }}<small class="fs-14px text-inverse text-opacity-40"> / {{ habits_count }}</small></h3>
-                            </div>
-                            <div class="col-5">
-                                <div id="chart-habits" class="mt-n3 mb-n2"></div>
-                            </div>
-                        </div>
-                        <div class="small text-inverse text-opacity-50 text-truncate mt-auto">
-                            {% for h in habits_data|slice:":2" %}
-                            <i class="bi bi-circle-fill fs-6px me-1 {% if h.logged %}text-theme{% else %}text-inverse text-opacity-25{% endif %}"></i>{{ h.habit.name|truncatechars:18 }}<br>
-                            {% empty %}<i class="bi bi-plus-circle me-1"></i> No habits yet{% endfor %}
-                        </div>
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
-                    </div>
-                </div>
-            </div>
- 
-        </div>
-        <!-- END ROW 1 -->
-
-                <!-- ── MAIN CONTENT — Left 8 / Right 4 ──────────────────────── -->
-        <div class="row">
- 
-            <!-- ════════════════════════ LEFT col-xl-8 ═══════════════════ -->
-            <div class="col-xl-8">
- 
-                <!-- ── TODAY'S ROUTINES (full-width, slot-grouped) ─────── -->
-                <div class="card mb-3">
-                    <div class="card-body">
- 
-                        <div class="d-flex fw-bold small mb-3">
-                            <span class="flex-grow-1">TODAY'S ROUTINES</span>
-                            <span id="routine-global-pct" class="{% if routine_pct == 100 %}text-theme{% else %}text-warning{% endif %}">
-                                {{ routine_done }}/{{ routine_total }} COMPLETE
-                            </span>
-                        </div>
- 
-                        {% if today_routines %}
- 
-                        {% comment %} {# Group routines by slot. We iterate in slot order:
-                           morning → afternoon → evening.
-                           Django templates can't group natively so we use three
-                           filtered passes — simple and readable. #} {% endcomment %}
- 
-                        {% with morning_routines=today_routines|dictsort:"routine.slot" %}
- 
-                        {# ── MORNING ───────────────────────────────────── #}
-                        {% comment %} {% for rt in today_routines %}{% if rt.routine.slot == 'morning' %}
-                        {% if forloop.first or not forloop.revcounter0 %}
-                        {% endif %}
-                        {% endfor %} {% endcomment %}
- 
-                        {% comment %} {# We'll use a simpler approach: one pass, emit slot header when slot changes.
-                           Since today_routines is already sorted slot→order in views.py,
-                           we just need to track the current slot.
-                           Django templates track "previous" with {% ifchanged %} #} {% endcomment %}
- 
-                        {% for rt in today_routines %}
- 
-                            {# Slot section divider #}
-                            {% ifchanged rt.routine.slot %}
-                            {% if not forloop.first %}</div>{% endif %}{# close previous slot-section #}
-                            <div class="slot-section mb-0">
-                            <div class="routine-slot-header">
-                                <span class="routine-slot-label">
-                                    {% if rt.routine.slot == 'morning' %}⬡ MORNING
-                                    {% elif rt.routine.slot == 'afternoon' %}⬡ AFTERNOON
-                                    {% else %}⬡ EVENING{% endif %}
-                                </span>
-                                <div class="routine-slot-hr"></div>
-                            </div>
-                            {% endifchanged %}
- 
-                            {# ── Individual routine block ─────────────── #}
-                            <div class="routine-block"
-                                 data-routine-id="{{ rt.routine.id }}">
- 
-                                <div class="routine-block-header">
-                                    <span class="routine-block-name">{{ rt.routine.name|upper }}</span>
-                                    {% if rt.streak > 0 %}
-                                    <span class="routine-streak">🔥 {{ rt.streak }}d streak</span>
-                                    {% endif %}
-                                    <span class="routine-block-pct
-                                        {% if rt.pct == 100 %}is-complete
-                                        {% elif rt.pct > 0 %}is-partial
-                                        {% else %}is-empty{% endif %}"
-                                          id="rt-pct-{{ rt.routine.id }}">
-                                        {{ rt.pct }}%
-                                    </span>
-                                </div>
- 
-                                <!-- thin progress bar -->
-                                <div class="routine-progress-bar">
-                                    <div class="routine-progress-fill {% if rt.pct == 100 %}complete{% endif %}"
-                                         id="rt-bar-{{ rt.routine.id }}"
-                                         style="width:{{ rt.pct }}%"></div>
-                                </div>
- 
-                                <!-- Item rows — two columns when ≥6 items -->
-                                <div class="{% if rt.items|length >= 6 %}row gx-0{% endif %}">
-                                {% for item in rt.items %}
-                                <div class="{% if rt.items|length >= 6 %}col-md-6{% endif %}">
-                                    <div class="rt-item-row {% if item.done %}is-done{% endif %}"
-                                        data-item-id="{{ item.item.id }}"
-                                        data-routine-id="{{ rt.routine.id }}"
-                                        onclick="toggleRoutineItem(this)">
-                                        <div class="rt-item-check"></div>
-                                        <div class="rt-item-cat cat-{{ item.item.category }}"></div>
-                                        <span class="rt-item-title">{{ item.item.title }}</span>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                                </div>
- 
-                            </div>
-                            {# end routine-block #}
- 
-                        {% empty %}
-                        {# handled below #}
-                        {% endfor %}
-                        </div>{# close last slot-section #}
- 
-                        {% endwith %}
- 
-                        {% else %}
-                        <div class="text-center py-5 text-inverse text-opacity-25 fs-10px"
-                             style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">
-                            NO ROUTINES SCHEDULED FOR TODAY
-                        </div>
-                        {% endif %}
- 
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
-                    </div>
-                </div>
-                <!-- END TODAY'S ROUTINES -->
- 
- 
-                <!-- ── ROW: Goal Progress + Habit Tracker ──────────────── -->
-                <div class="row">
- 
-                    <!-- GOAL PROGRESS -->
-                    <div class="col-xl-6">
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <div class="d-flex fw-bold small mb-3">
-                                    <span class="flex-grow-1">GOAL PROGRESS</span>
-                                    <span class="text-inverse text-opacity-40" style="font-family:'JetBrains Mono',monospace; font-size:10px;">{{ goals_count }} ACTIVE</span>
-                                </div>
- 
-                                <div class="hud-scroll-area" style="max-height:260px;">
-                                {% if goals_data %}
-                                {% for g in goals_data %}
-                                <div class="goal-row">
-                                    <div class="goal-row-name">
-                                        {% if g.is_overdue %}<i class="bi bi-exclamation-circle-fill text-danger me-1 fs-10px"></i>{% endif %}
-                                        {{ g.goal.name }}
-                                    </div>
-                                    <div class="goal-row-meta">
-                                        <div class="goal-bar-wrap">
-                                            <div class="goal-bar-fill
-                                                {% if g.pct >= 75 %}hi{% elif g.pct >= 40 %}mid{% else %}lo{% endif %}"
-                                                 style="width:{{ g.pct }}%"></div>
-                                        </div>
-                                        <span class="goal-pct-label
-                                            {% if g.pct >= 75 %}hi{% elif g.pct >= 40 %}mid{% else %}lo{% endif %}">
-                                            {{ g.pct }}%
-                                        </span>
-                                    </div>
-                                    {% if g.goal.due_date %}
-                                    <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,0.2); margin-top:3px; letter-spacing:0.04em;">
-                                        {{ g.open_items }} item{{ g.open_items|pluralize }} open
-                                        &middot; TARGET {{ g.goal.due_date|date:"M j"|upper }}
-                                        {% if g.stalled_days and g.stalled_days > 7 %}
-                                        &middot; <span style="color:var(--bs-warning);">{{ g.stalled_days }}D STALLED</span>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                                {% endfor %}
-                                {% else %}
-                                <div class="text-center py-4 text-inverse text-opacity-25 fs-10px"
-                                     style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">
-                                    NO ACTIVE GOALS
-                                </div>
-                                {% endif %}
-                                </div>
- 
-                            </div>
-                            <div class="card-arrow">
-                                <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
-                                <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- END GOAL PROGRESS -->
- 
- 
-                    <!-- HABIT TRACKER (this week) -->
-                    <div class="col-xl-6">
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <div class="d-flex fw-bold small mb-3">
-                                    <span class="flex-grow-1">HABIT TRACKER</span>
-                                    <span class="text-inverse text-opacity-40" style="font-family:'JetBrains Mono',monospace; font-size:10px;">THIS WEEK</span>
-                                </div>
- 
-                                <!-- Week day header row -->
-                                {% if habits_data %}
-                                <div class="d-flex mb-2">
-                                    <div style="width:150px; flex-shrink:0;"></div>
-                                    <div class="d-flex gap-1 ms-2" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:rgba(255,255,255,0.25); letter-spacing:0.04em;">
-                                        <span style="width:12px;text-align:center;">M</span>
-                                        <span style="width:12px;text-align:center;">T</span>
-                                        <span style="width:12px;text-align:center;">W</span>
-                                        <span style="width:12px;text-align:center;">T</span>
-                                        <span style="width:12px;text-align:center;">F</span>
-                                        <span style="width:12px;text-align:center;">S</span>
-                                        <span style="width:12px;text-align:center;">S</span>
-                                    </div>
-                                    <div class="ms-auto" style="font-family:'JetBrains Mono',monospace; font-size:8px; color:rgba(255,255,255,0.25); letter-spacing:0.04em; width:36px; text-align:right;">STK</div>
-                                </div>
- 
-                                <div class="hud-scroll-area" style="max-height:220px;">
-                                {% for h in habits_data %}
-                                <div class="d-flex align-items-center mb-2">
-                                    <div style="width:150px; flex-shrink:0;">
-                                        <div class="fs-11px text-inverse text-truncate">
-                                            {% if h.logged %}
-                                            <i class="bi bi-check-circle-fill text-theme me-1 fs-9px"></i>
-                                            {% else %}
-                                            <i class="bi bi-circle text-inverse text-opacity-20 me-1 fs-9px"></i>
-                                            {% endif %}
-                                            {{ h.habit.name|truncatechars:20 }}
-                                        </div>
-                                    </div>
-                                    <!-- Day dots -->
-                                    <div class="d-flex gap-1 ms-2">
-                                        {% for log in h.week_logs %}
-                                        <div style="width:12px; height:12px; border-radius:2px;
-                                            {% if log %}background:rgba(12,208,150,{% if log.done %}0.85{% else %}0.15{% endif %});
-                                            {% else %}background:rgba(255,255,255,0.06);{% endif %}">
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                    <div class="ms-auto" style="font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,0.3); width:36px; text-align:right;">
-                                        {% if h.streak > 0 %}{{ h.streak }}{% else %}—{% endif %}
-                                    </div>
-                                </div>
-                                {% endfor %}
-                                </div>
- 
-                                {% else %}
-                                <div class="text-center py-4 text-inverse text-opacity-25 fs-10px"
-                                     style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">
-                                    NO HABITS TRACKED YET
-                                </div>
-                                {% endif %}
- 
-                            </div>
-                            <div class="card-arrow">
-                                <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
-                                <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- END HABIT TRACKER -->
- 
-                </div>
-                <!-- END Goal + Habits row -->
- 
- 
-                <!-- ── OPEN TASKS ────────────────────────────────────────── -->
-                <div class="card mb-3">
-                    <div class="card-body">
- 
-                        <div class="d-flex fw-bold small mb-3">
-                            <span class="flex-grow-1">OPEN TASKS</span>
-                            <span class="text-inverse text-opacity-40" style="font-family:'JetBrains Mono',monospace; font-size:10px;">
-                                {{ tasks_todo_count }} REMAINING
-                            </span>
-                        </div>
- 
-                        <div class="row gx-4">
- 
-                            <!-- Overdue column -->
-                            {% if tasks_overdue %}
-                            <div class="col-xl-4">
-                                <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.08em; color:#f87171; margin-bottom:6px;">OVERDUE</div>
-                                <div class="hud-scroll-area" style="max-height:160px;">
-                                {% for t in tasks_overdue %}
-                                <div class="task-row">
-                                    <div class="task-row-dot p-{{ t.priority }}"></div>
-                                    <span class="task-row-name">{{ t.name }}</span>
-                                    <span class="task-row-date overdue">{{ t.due_date|date:"M j"|upper }}</span>
-                                </div>
-                                {% endfor %}
-                                </div>
-                            </div>
-                            {% endif %}
- 
-                            <!-- Due today column -->
-                            <div class="{% if tasks_overdue %}col-xl-4{% else %}col-xl-6{% endif %}">
-                                <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.08em; color:var(--bs-theme); margin-bottom:6px;">DUE TODAY</div>
-                                <div class="hud-scroll-area" style="max-height:160px;">
-                                {% for t in tasks_due_today %}
-                                <div class="task-row">
-                                    <div class="task-row-dot p-{{ t.priority }}"></div>
-                                    <span class="task-row-name">{{ t.name }}</span>
-                                    <span class="task-row-date">{{ t.get_priority_display|upper }}</span>
-                                </div>
-                                {% empty %}
-                                <div class="text-inverse text-opacity-25 fs-10px" style="font-family:'JetBrains Mono',monospace;">ALL CLEAR</div>
-                                {% endfor %}
-                                </div>
-                            </div>
- 
-                            <!-- Upcoming column -->
-                            <div class="{% if tasks_overdue %}col-xl-4{% else %}col-xl-6{% endif %}">
-                                <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.08em; color:rgba(255,255,255,0.35); margin-bottom:6px;">UPCOMING</div>
-                                <div class="hud-scroll-area" style="max-height:160px;">
-                                {% for t in tasks_upcoming %}
-                                <div class="task-row">
-                                    <div class="task-row-dot p-{{ t.priority }}"></div>
-                                    <span class="task-row-name">{{ t.name }}</span>
-                                    <span class="task-row-date">{{ t.due_date|date:"M j"|upper }}</span>
-                                </div>
-                                {% empty %}
-                                <div class="text-inverse text-opacity-25 fs-10px" style="font-family:'JetBrains Mono',monospace;">NONE UPCOMING</div>
-                                {% endfor %}
-                                </div>
-                            </div>
- 
-                        </div>
- 
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
-                    </div>
-                </div>
-                <!-- END OPEN TASKS -->
- 
- 
-                <!-- ── UPCOMING REMINDERS ────────────────────────────────── -->
-                {% if upcoming_reminders %}
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex fw-bold small mb-3">
-                            <span class="flex-grow-1">UPCOMING REMINDERS</span>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="w-100 mb-0 small align-middle text-nowrap">
-                                <tbody>
-                                    {% for r in upcoming_reminders %}
-                                    <tr>
-                                        <td class="py-2 pe-4">
-                                            <span class="d-flex align-items-center">
-                                                <i class="bi bi-circle-fill fs-6px {% if r.is_urgent %}text-theme{% else %}text-inverse text-opacity-25{% endif %} me-2"></i>
-                                                {{ r.title }}
-                                            </span>
-                                        </td>
-                                        <td class="pe-4">
-                                            <small style="font-family:'JetBrains Mono',monospace;">{{ r.next_run|date:"M j, g:i a"|upper }}</small>
-                                        </td>
-                                        <td class="pe-4">
-                                            <span class="badge bg-secondary bg-opacity-25 text-inverse text-opacity-70 rounded-0 pt-5px fs-9px">{{ r.frequency|upper }}</span>
-                                        </td>
-                                        <td>
-                                            {% if r.source %}
-                                            <span class="text-inverse text-opacity-40 fs-10px">
-                                                {% if r.task %}TASK{% elif r.routine %}ROUTINE{% elif r.goal %}GOAL{% elif r.habit %}HABIT{% endif %}
-                                                &middot; {{ r.source }}
-                                            </span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
-                    </div>
-                </div>
-                {% endif %}
-                <!-- END UPCOMING REMINDERS -->
- 
-            </div>
-            <!-- END LEFT col-xl-8 -->
- 
- 
-            <!-- ════════════════════════ RIGHT col-xl-4 ══════════════════ -->
-            <div class="col-xl-4">
- 
-                <!-- A LOOK AT THE DAY ─────────────────────────────────── -->
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex fw-bold small mb-3">
-                            <span class="flex-grow-1">A LOOK AT THE DAY</span>
-                            <span class="text-inverse text-opacity-40" style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.06em;">
-                                {{ today|date:"M j"|upper }}
-                            </span>
-                        </div>
-                        <div class="hud-scroll-area" style="max-height:320px;">
-                            {% if today_schedule %}
-                                {% for item in today_schedule %}
-                                <div class="sched-item">
-                                    <div class="sched-dot sched-dot-{{ item.source }}"></div>
-                                    <div class="flex-fill" style="min-width:0;">
-                                        <div class="sched-title {% if item.done %}is-done{% endif %}">{{ item.title }}</div>
-                                        <div class="sched-meta">
-                                            <span class="sched-badge sched-badge-{{ item.source }}">{{ item.source_label }}</span>
-                                            <span class="sched-time{% if item.is_overdue %} is-overdue{% elif item.done %} is-logged{% endif %}">{{ item.time_label }}</span>
-                                            {% if item.show_pct %}<span class="sched-pct">{{ item.pct }}%</span>{% endif %}
-                                        </div>
-                                    </div>
-                                    {% if item.done %}<i class="bi bi-check-circle-fill sched-done-icon"></i>{% endif %}
-                                </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="text-center py-5 text-inverse text-opacity-25 fs-10px" style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">NOTHING SCHEDULED</div>
-                            {% endif %}
-                        </div>
-                        <div class="d-flex flex-wrap gap-1 mt-3 pt-2" style="border-top:1px solid rgba(255,255,255,0.07);">
-                            <span class="sched-time"><span class="sched-dot sched-dot-task d-inline-block me-1" style="vertical-align:middle;margin-top:-1px;"></span>TASK</span>
-                            <span class="sched-time ms-2"><span class="sched-dot sched-dot-routine d-inline-block me-1" style="vertical-align:middle;margin-top:-1px;"></span>ROUTINE</span>
-                            <span class="sched-time ms-2"><span class="sched-dot sched-dot-goal d-inline-block me-1" style="vertical-align:middle;margin-top:-1px;"></span>GOAL</span>
-                            <span class="sched-time ms-2"><span class="sched-dot sched-dot-habit d-inline-block me-1" style="vertical-align:middle;margin-top:-1px;"></span>HABIT</span>
-                        </div>
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
-                    </div>
-                </div>
- 
-                <!-- UPCOMING SOON ────────────────────────────────────── -->
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex fw-bold small mb-3">
-                            <span class="flex-grow-1">UPCOMING SOON</span>
-                            <span class="text-inverse text-opacity-40" style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.06em;">NEXT 14 DAYS</span>
-                        </div>
-                        <div class="hud-scroll-area" style="max-height:220px;">
-                            {% if upcoming_soon %}
-                                {% for item in upcoming_soon %}
-                                <div class="sched-item">
-                                    <div class="sched-dot sched-dot-{{ item.source }}" style="margin-top:3px;"></div>
-                                    <div class="flex-fill" style="min-width:0;">
-                                        <div class="sched-title">{{ item.title }}</div>
-                                        <div class="sched-meta">
-                                            <span class="sched-badge sched-badge-{{ item.source }}">{{ item.source_label }}</span>
-                                            <span class="sched-time">{{ item.due_date|date:"M j"|upper }}</span>
-                                        </div>
-                                    </div>
-                                    {% if item.days_until == 1 %}<span class="days-pill days-pill-1">1D</span>
-                                    {% elif item.days_until <= 3 %}<span class="days-pill days-pill-3">{{ item.days_until }}D</span>
-                                    {% elif item.days_until <= 7 %}<span class="days-pill days-pill-7">{{ item.days_until }}D</span>
-                                    {% else %}<span class="days-pill days-pill-14">{{ item.days_until }}D</span>{% endif %}
-                                </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="text-center py-4 text-inverse text-opacity-25 fs-10px" style="font-family:'JetBrains Mono',monospace; letter-spacing:0.06em;">CLEAR HORIZON — NOTHING DUE</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
-                    </div>
-                </div>
- 
-                <!-- MINI CALENDAR ────────────────────────────────────── -->
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center fw-bold small mb-3">
-                            <span class="flex-grow-1">CALENDAR</span>
-                            <div class="d-flex align-items-center gap-1">
-                                <button id="cal-prev" class="cal-nav-btn"><i class="bi bi-chevron-left"></i></button>
-                                <span id="cal-month-label" style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:0.06em; color:rgba(255,255,255,0.4); min-width:90px; text-align:center;"></span>
-                                <button id="cal-next" class="cal-nav-btn"><i class="bi bi-chevron-right"></i></button>
-                            </div>
-                        </div>
-                        <div id="cal-grid" class="mini-cal-grid"></div>
-                        <div class="d-flex gap-1 flex-wrap mt-3 pt-2" style="border-top:1px solid rgba(255,255,255,0.07);">
-                            <span class="sched-time"><span class="cal-dot cal-dot-task d-inline-block me-1" style="vertical-align:middle;"></span>TASKS</span>
-                            <span class="sched-time ms-2"><span class="cal-dot cal-dot-goal d-inline-block me-1" style="vertical-align:middle;"></span>GOALS</span>
-                            <span class="sched-time ms-2"><span class="cal-dot cal-dot-reminder d-inline-block me-1" style="vertical-align:middle;"></span>REMINDERS</span>
-                        </div>
-                    </div>
-                    <div class="card-arrow">
-                        <div class="card-arrow-top-left"></div><div class="card-arrow-top-right"></div>
-                        <div class="card-arrow-bottom-left"></div><div class="card-arrow-bottom-right"></div>
-                    </div>
-                </div>
- 
-            </div>
-            <!-- END RIGHT col-xl-4 -->
- 
-        </div>
-        <!-- END MAIN CONTENT ROW -->
-         
+    <!-- scroll-to-top -->
+    <a href="#" data-toggle="scroll-to-top" class="btn-scroll-top fade">
+        <i class="fa fa-arrow-up"></i>
+    </a>
 
 </div>
 <!-- END #app -->
 
-<!-- HUD theme core JS -->
+
+<!-- ═══════════════════════════════ CORE JS ══════════════════════════════ -->
 <script src="{% static 'js/vendor.min.js' %}"></script>
 <script src="{% static 'js/app.min.js' %}"></script>
 
-{{ calendar_dots_data|json_script:"calendar-dots-data" }}
- 
-<script>
-(function () {
-    'use strict';
- 
-    // ── Read dot data from the server ─────────────────────────────────────
-    const rawEl   = document.getElementById('calendar-dots-data');
-    const dotsMap = rawEl ? JSON.parse(rawEl.textContent) : {};
- 
-    // ── State ─────────────────────────────────────────────────────────────
-    const realToday   = new Date();
-    let   viewYear    = realToday.getFullYear();
-    let   viewMonth   = realToday.getMonth();   // 0-indexed
- 
-    // ── Helpers ───────────────────────────────────────────────────────────
-    function isoDate(y, m, d) {
-        return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-    }
- 
-    function isToday(y, m, d) {
-        return (y === realToday.getFullYear() &&
-                m === realToday.getMonth() &&
-                d === realToday.getDate());
-    }
- 
-    function monthLabel(y, m) {
-        return new Date(y, m, 1)
-            .toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-            .toUpperCase();
-    }
- 
-    // ── Render ────────────────────────────────────────────────────────────
-    function renderCalendar() {
-        const grid  = document.getElementById('cal-grid');
-        const label = document.getElementById('cal-month-label');
-        if (!grid || !label) return;
- 
-        label.textContent = monthLabel(viewYear, viewMonth);
- 
-        const firstDow    = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
-        const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
- 
-        let html = '';
- 
-        // Day-of-week headers
-        ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(function (d) {
-            html += '<div class="cal-day-header">' + d + '</div>';
-        });
- 
-        // Empty cells before the 1st
-        for (let i = 0; i < firstDow; i++) {
-            html += '<div class="cal-day-cell cal-other-month"><span class="cal-day-num"></span><div class="cal-dots"></div></div>';
-        }
- 
-        // Day cells
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dateStr  = isoDate(viewYear, viewMonth, day);
-            const todayCls = isToday(viewYear, viewMonth, day) ? ' cal-today' : '';
-            const sources  = dotsMap[dateStr] || [];
- 
-            let dotHtml = '';
-            if (sources.indexOf('task')     >= 0) dotHtml += '<span class="cal-dot cal-dot-task"></span>';
-            if (sources.indexOf('goal')     >= 0) dotHtml += '<span class="cal-dot cal-dot-goal"></span>';
-            if (sources.indexOf('reminder') >= 0) dotHtml += '<span class="cal-dot cal-dot-reminder"></span>';
- 
-            html += '<div class="cal-day-cell' + todayCls + '">'
-                  +   '<span class="cal-day-num">' + day + '</span>'
-                  +   '<div class="cal-dots">' + dotHtml + '</div>'
-                  + '</div>';
-        }
- 
-        grid.innerHTML = html;
-    }
- 
-    // ── Navigation ────────────────────────────────────────────────────────
-    const prevBtn = document.getElementById('cal-prev');
-    const nextBtn = document.getElementById('cal-next');
- 
-    if (prevBtn) {
-        prevBtn.addEventListener('click', function () {
-            viewMonth--;
-            if (viewMonth < 0) { viewMonth = 11; viewYear--; }
-            renderCalendar();
-        });
-    }
- 
-    if (nextBtn) {
-        nextBtn.addEventListener('click', function () {
-            viewMonth++;
-            if (viewMonth > 11) { viewMonth = 0; viewYear++; }
-            renderCalendar();
-        });
-    }
- 
-    // ── Initial render ────────────────────────────────────────────────────
-    renderCalendar();
- 
-}());
-</script>
-
 <script>
 /* ══════════════════════════════════════════════════════════════
-   CLOCK
+   CLOCK — ticks every second
 ══════════════════════════════════════════════════════════════ */
-function tickClock() {
-    const now  = new Date();
-    const pad  = n => String(n).padStart(2, '0');
-    document.getElementById('hud-clock').textContent =
-        `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-}
-tickClock();
-setInterval(tickClock, 1000);
+(function () {
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function tickClock() {
+        var now = new Date();
+        var el = document.getElementById('hud-clock');
+        if (el) {
+            el.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+        }
+    }
+    tickClock();
+    setInterval(tickClock, 1000);
+
+    // Fill date from JS when the template context doesn't provide `today`
+    // (happens on pages other than the HUD — avoids blank date line)
+    var dateEl = document.getElementById('hud-date');
+    if (dateEl && !dateEl.textContent.trim()) {
+        var d      = new Date();
+        var days   = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        dateEl.textContent = days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate();
+    }
+}());
 
 /* ══════════════════════════════════════════════════════════════
    WEATHER — wttr.in (Raleigh, NC)
 ══════════════════════════════════════════════════════════════ */
-const WEATHER_URL = 'https://wttr.in/Raleigh,NC?format=j1';
-const WEATHER_ICONS = {
-    113: '☀️', 116: '⛅', 119: '☁️', 122: '☁️',
-    143: '🌫️', 176: '🌦️', 179: '🌨️', 182: '🌧️',
-    185: '🌧️', 200: '⛈️', 227: '❄️', 230: '❄️',
-    248: '🌫️', 260: '🌫️', 263: '🌦️', 266: '🌧️',
-    281: '🌧️', 284: '🌧️', 293: '🌦️', 296: '🌧️',
-    299: '🌧️', 302: '🌧️', 305: '🌧️', 308: '🌧️',
-    311: '🌧️', 314: '🌧️', 317: '🌨️', 320: '🌨️',
-    323: '🌨️', 326: '🌨️', 329: '❄️', 332: '❄️',
-    335: '❄️', 338: '❄️', 350: '🌧️', 353: '🌦️',
-    356: '🌧️', 359: '🌧️', 362: '🌨️', 365: '🌨️',
-    368: '🌨️', 371: '❄️', 374: '🌨️', 377: '🌨️',
-    386: '⛈️', 389: '⛈️', 392: '⛈️', 395: '❄️',
-};
+(function () {
+    var WEATHER_URL = 'https://wttr.in/Raleigh,NC?format=j1';
+    var WEATHER_ICONS = {
+        113: '☀️', 116: '⛅', 119: '☁️', 122: '☁️',
+        143: '🌫️', 176: '🌦️', 179: '🌨️', 182: '🌧️',
+        185: '🌧️', 200: '⛈️', 227: '❄️', 230: '❄️',
+        248: '🌫️', 260: '🌫️', 263: '🌦️', 266: '🌧️',
+        281: '🌧️', 284: '🌧️', 293: '🌦️', 296: '🌧️',
+        299: '🌧️', 302: '🌧️', 305: '🌧️', 308: '🌧️',
+        311: '🌧️', 314: '🌧️', 317: '🌨️', 320: '🌨️',
+        323: '🌨️', 326: '🌨️', 329: '❄️', 332: '❄️',
+        335: '❄️', 338: '❄️', 350: '🌧️', 353: '🌦️',
+        356: '🌧️', 359: '🌧️', 362: '🌨️', 365: '🌨️',
+        368: '🌨️', 371: '❄️', 374: '🌨️', 377: '🌨️',
+        386: '⛈️', 389: '⛈️', 392: '⛈️', 395: '❄️',
+    };
 
-fetch(WEATHER_URL)
-    .then(r => r.json())
-    .then(data => {
-        const cur    = data.current_condition[0];
-        const code   = parseInt(cur.weatherCode);
-        const tempF  = cur.temp_F;
-        const desc   = cur.weatherDesc[0].value;
-        const icon   = WEATHER_ICONS[code] || '🌡️';
+    fetch(WEATHER_URL)
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            var cur   = data.current_condition[0];
+            var code  = parseInt(cur.weatherCode);
+            var tempF = cur.temp_F;
+            var desc  = cur.weatherDesc[0].value;
+            var icon  = WEATHER_ICONS[code] || '🌡️';
 
-        document.getElementById('hud-weather-icon').textContent = icon;
-        document.getElementById('hud-weather-temp').textContent = `${tempF}°F`;
-        document.getElementById('hud-weather-desc').textContent = desc.toUpperCase();
-    })
-    .catch(() => {
-        document.getElementById('hud-weather-desc').textContent = 'UNAVAIL';
-    });
+            var iconEl = document.getElementById('hud-weather-icon');
+            var tempEl = document.getElementById('hud-weather-temp');
+            var descEl = document.getElementById('hud-weather-desc');
 
-/* ══════════════════════════════════════════════════════════════
-   APEXCHARTS — stat card sparklines
-══════════════════════════════════════════════════════════════ */
-const THEME_COLOR = getComputedStyle(document.documentElement)
-    .getPropertyValue('--bs-theme').trim() || '#20c997';
-
-const sparkDefaults = {
-    chart: { sparkline: { enabled: true }, animations: { enabled: false } },
-    tooltip: { enabled: false },
-    fill: { opacity: 0.6 },
-};
-
-// Tasks due — bar sparkline
-new ApexCharts(document.getElementById('chart-tasks-due'), {
-    ...sparkDefaults,
-    chart: { ...sparkDefaults.chart, type: 'bar', height: 30, width: '100%' },
-    series: [{ data: [
-        {{ tasks_todo_count }}, {{ tasks_in_progress }},
-        {{ tasks_overdue_count }}, {{ tasks_due_today.count }}, {{ task_completion_rate }}
-    ] }],
-    colors: [THEME_COLOR],
-    plotOptions: { bar: { columnWidth: '70%' } },
-}).render();
-
-// Routines — pie
-new ApexCharts(document.getElementById('chart-routines'), {
-    ...sparkDefaults,
-    chart: { ...sparkDefaults.chart, type: 'donut', height: 45, width: '100%' },
-    series: [{{ routine_done }}, {% widthratio routine_total 1 1 as rt_total %}{% if routine_total > routine_done %}{{ routine_total|add:"-"|add:routine_done }}{% else %}0{% endif %}],
-    colors: [THEME_COLOR, 'rgba(255,255,255,0.08)'],
-    legend: { show: false },
-    dataLabels: { enabled: false },
-    stroke: { width: 0 },
-}).render();
-
-// Goals — donut
-new ApexCharts(document.getElementById('chart-goals'), {
-    ...sparkDefaults,
-    chart: { ...sparkDefaults.chart, type: 'donut', height: 45, width: '100%' },
-    series: [{{ goals_count }}, Math.max(1, 10 - {{ goals_count }})],
-    colors: [THEME_COLOR, 'rgba(255,255,255,0.08)'],
-    legend: { show: false },
-    dataLabels: { enabled: false },
-    stroke: { width: 0 },
-}).render();
-
-// Habits — donut logged vs unlogged
-new ApexCharts(document.getElementById('chart-habits'), {
-    ...sparkDefaults,
-    chart: { ...sparkDefaults.chart, type: 'donut', height: 45, width: '100%' },
-    series: [
-        {{ habits_logged_today }},
-        Math.max(0, {{ habits_count }} - {{ habits_logged_today }})
-    ],
-    colors: [THEME_COLOR, 'rgba(255,255,255,0.08)'],
-    legend: { show: false },
-    dataLabels: { enabled: false },
-    stroke: { width: 0 },
-}).render();
-
-/* ══════════════════════════════════════════════════════════════
-   AUTO REFRESH — full page reload every 60 seconds
-══════════════════════════════════════════════════════════════ */
-{% comment %} setTimeout(() => location.reload(), 60 * 1000); {% endcomment %}
+            if (iconEl) iconEl.textContent = icon;
+            if (tempEl) tempEl.textContent = tempF + '°F';
+            if (descEl) descEl.textContent = desc.toUpperCase();
+        })
+        .catch(function () {
+            var descEl = document.getElementById('hud-weather-desc');
+            if (descEl) descEl.textContent = 'UNAVAIL';
+        });
+}());
 </script>
 
-<script>
-/* ════════════════════════════════════════════════════════════
-   ROUTINE ITEM TOGGLE
-   Sends a POST to the toggle API and updates the UI in-place.
-════════════════════════════════════════════════════════════ */
-function toggleRoutineItem(row) {
-    if (row.classList.contains('is-loading')) return;
- 
-    const itemId    = row.dataset.itemId;
-    const routineId = row.dataset.routineId;
- 
-    // Optimistic loading state
-    row.classList.add('is-loading');
- 
-    // Django CSRF token — reads from the cookie
-    function getCsrfToken() {
-        const m = document.cookie.match(/csrftoken=([^;]+)/);
-        return m ? m[1] : '';
-    }
- 
-    fetch(`/api/routines/item/${itemId}/toggle/`, {
-        method:  'POST',
-        headers: {
-            'X-CSRFToken': getCsrfToken(),
-            'Content-Type': 'application/json',
-        },
-    })
-    .then(function (resp) { return resp.json(); })
-    .then(function (data) {
-        if (!data.ok) throw new Error('Toggle failed');
- 
-        // Update the clicked row
-        row.classList.remove('is-loading');
-        if (data.done) {
-            row.classList.add('is-done');
-        } else {
-            row.classList.remove('is-done');
-        }
- 
-        // Update the routine % badge
-        const pctEl = document.getElementById('rt-pct-' + routineId);
-        if (pctEl) {
-            pctEl.textContent = data.routine_pct + '%';
-            pctEl.className = 'routine-block-pct ' +
-                (data.routine_pct === 100 ? 'is-complete' :
-                 data.routine_pct > 0    ? 'is-partial'  : 'is-empty');
-        }
- 
-        // Update the progress bar
-        const barEl = document.getElementById('rt-bar-' + routineId);
-        if (barEl) {
-            barEl.style.width = data.routine_pct + '%';
-            barEl.classList.toggle('complete', data.routine_pct === 100);
-        }
- 
-        // Update the global header counter
-        const globalEl = document.getElementById('routine-global-pct');
-        if (globalEl) {
-            // Recount across all routines after a short delay so other
-            // concurrent toggles can settle — simplest is a full re-fetch
-            // but for now we just re-query the stats endpoint
-            fetch('/api/stats/')
-                .then(function (r) { return r.json(); })
-                .then(function (stats) {
-                    // We don't have done/total from stats endpoint so just
-                    // reload the text if total is available on the page.
-                    // Simplest safe approach: leave it until next 60-second refresh.
-                });
-        }
-    })
-    .catch(function (err) {
-        console.error('Toggle error:', err);
-        row.classList.remove('is-loading');
-        // Revert optimistic state if it was changed
-    });
-}
-</script>
+{# ── Page-specific JS goes here ───────────────────────────────────────── #}
+{% block extra_scripts %}{% endblock %}
 
 </body>
 </html>
