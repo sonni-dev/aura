@@ -9,6 +9,13 @@ class Reminder(models.Model):
     or one-time notifications creates a Reminder and links back to itself
     via the appropriate nullable FK.
  
+    Completion is tracked via is_complete / completed_at. Call dismiss() to
+    mark a reminder done — it will also propagate completion to the linked
+    source object (Task, GoalItem, or RoutineItem) unless sync_source=False.
+ 
+    Source models call their own dismiss logic via bulk .update() to avoid
+    triggering a recursive loop.
+ 
     Celery Beat polls this table every minute via process_due_reminders()
     in reminders/tasks.py. Channel controls how the alert is delivered —
     'in_app' is the default; 'sms' plugs in Twilio later without touching
@@ -56,20 +63,40 @@ class Reminder(models.Model):
     last_run   = models.DateTimeField(null=True, blank=True)
     is_active  = models.BooleanField(default=True)
 
+    # ── Completion ────────────────────────────────────────────────────────
+    is_complete = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
 
     # ── Source model FKs (at most one will be set) ────────────────────────
+    #
+    # Hierarchy for granularity:
+    #   task         → a standalone Task
+    #   goal_item    → a single step inside a Goal
+    #   goal         → the whole Goal (e.g. "monthly eval" reminder)
+    #   routine_item → a single RoutineItem that needs a timely nudge
+    #   routine      → the whole Routine (e.g. "start your evening routine")
+    #   habit        → a Habit
+    #
+    # Leave all blank for a standalone reminder.
+
+
     task    = models.ForeignKey(
         'tasks.Task',
         null=True, blank=True,
         on_delete=models.CASCADE,
         related_name='reminders',
     )
+
+    routine_item = models.ForeignKey('routines.RoutineItem', null=True, blank=True, on_delete=models.CASCADE, related_name='reminders')
     routine = models.ForeignKey(
         'routines.Routine',
         null=True, blank=True,
         on_delete=models.CASCADE,
         related_name='reminders',
     )
+
+    goal_item = models.ForeignKey('goals.GoalItem', null=True, blank=True, on_delete=models.CASCADE, related_name='reminders')
     goal    = models.ForeignKey(
         'goals.Goal',
         null=True, blank=True,
@@ -93,14 +120,15 @@ class Reminder(models.Model):
         verbose_name_plural = 'Reminders'
 
     def __str__(self):
-        return f'{self.title} ({self.frequency})'
+        status = ' ✓' if self.is_complete else ''
+        return f'{self.title} ({self.frequency}){status}'
     
     def save(self, *args, **kwargs):
         if not self.next_run:
             self.next_run = self.start_date
         super().save(*args, **kwargs)
     
-    # ── Scheduling helpers ────────────────────────────────────────────────
+     # ── Introspection helpers ─────────────────────────────────────────────
  
     def advance_next_run(self):
         """
@@ -138,7 +166,66 @@ class Reminder(models.Model):
     
     @property
     def source(self):
-        """Return whichever source object owns this reminder, or None."""
-        return self.task or self.routine or self.goal or self.habit
+        """
+        Return whichever source object owns this reminder, or None.
+        Item-level FKs are checked before parent-level ones so the most
+        specific source is returned when both are set (e.g. goal_item + goal).
+        """
+        return (
+            self.task
+            or self.goal_item
+            or self.goal
+            or self.routine_item
+            or self.routine
+            or self.habit
+        )
+    
+    @property
+    def source_label(self):
+        """Human-readable type label for the linked source, e.g. 'Task'."""
+        if self.task_id:            return 'Task'
+        if self.goal_item_id:       return 'Goal Item'
+        if self.goal_id:            return 'Goal'
+        if self.routine_item_id:    return 'Routine Item'
+        if self.routine_id:         return 'Routine'
+        if self.habit_id:           return 'Habit'
 
 
+    # ── Completion helpers ────────────────────────────────────────────────
+    
+    def dismiss(self, sync_source=True):
+        """
+        Mark this reminder as complete/dismissed and deactivate it.
+ 
+        If sync_source=True (default), also propagates completion to the
+        linked source object:
+          - Task        → task.mark_complete()
+          - GoalItem    → goal_item.mark_complete()
+          - RoutineItem → routine_item.toggle_today() if not already done today
+ 
+        Goal / Routine / Habit level reminders are one-directional: dismissing
+        the reminder does not auto-complete the entire goal/routine/habit
+        (too coarse). Source models call dismiss(sync_source=False) when they
+        bulk-update reminders to avoid triggering a recursive loop.
+        """
+        if self.is_complete:
+            return  # already dismissed - nothihng to do
+        
+        now = timezone.now()
+        self.is_complete = True
+        self.completed_at = now
+        self.is_active = False
+        self.save(update_fields=['is_complete', 'completed_at', 'is_active', 'updated_at'])
+
+        if not sync_source:
+            return
+    
+        # ── Propagate to source ──────────────────────────────────────────
+        if self.task_id and not self.task.is_complete:
+            self.task.mark_complete()
+        
+        elif self.goal_item_id and not self.goal_item.is_complete:
+            self.goal_item.mark_complete()
+
+        elif self.routine_item_id and not self.routine_item.is_done_today():
+            self.routine_item.toggle_today()
