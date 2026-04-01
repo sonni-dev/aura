@@ -897,7 +897,7 @@
                             <table class="w-100 mb-0 small align-middle text-nowrap">
                                 <tbody>
                                     {% for r in upcoming_reminders %}
-                                    <tr>
+                                    <tr id="reminder-row-{{ r.pk }}">
                                         <td class="py-2 pe-4">
                                             <span class="d-flex align-items-center">
                                                 <i class="bi bi-circle-fill fs-6px {% if r.is_urgent %}text-theme{% else %}text-inverse text-opacity-25{% endif %} me-2"></i>
@@ -910,13 +910,27 @@
                                         <td class="pe-4">
                                             <span class="badge bg-secondary bg-opacity-25 text-inverse text-opacity-70 rounded-0 pt-5px fs-9px">{{ r.frequency|upper }}</span>
                                         </td>
-                                        <td>
+                                        <td class="pe-4">
                                             {% if r.source %}
                                             <span class="text-inverse text-opacity-40 fs-10px">
-                                                {% if r.task %}TASK{% elif r.routine %}ROUTINE{% elif r.goal %}GOAL{% elif r.habit %}HABIT{% endif %}
+                                                {% if r.task %}TASK
+                                                {% elif r.goal_item %}GOAL ITEM
+                                                {% elif r.goal %}GOAL
+                                                {% elif r.routine_item %}ROUTINE ITEM
+                                                {% elif r.routine %}ROUTINE
+                                                {% elif r.habit %}HABIT{% endif %}
                                                 &middot; {{ r.source }}
                                             </span>
                                             {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <button
+                                                class="btn btn-sm p-0 text-inverse text-opacity-30 hud-dismiss-btn"
+                                                style="background:none; border:none; font-size:14px; line-height:1; cursor:pointer;"
+                                                title="Dismiss reminder"
+                                                onclick="dismissReminder({{ r.pk }}, 'reminder-row-{{ r.pk }}')">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
                                         </td>
                                     </tr>
                                     {% endfor %}

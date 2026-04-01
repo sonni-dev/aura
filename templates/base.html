@@ -128,21 +128,19 @@
                     <h6 class="dropdown-header fs-10px mb-1">DUE REMINDERS</h6>
                     <div class="dropdown-divider mt-1"></div>
                     {% for r in due_reminders %}
-                    <a href="#" class="d-flex align-items-center py-10px dropdown-item text-wrap fw-semibold">
-                        <div class="fs-20px">
-                            {% if r.task %}<i class="bi bi-check2-square text-theme"></i>
-                            {% elif r.routine %}<i class="bi bi-arrow-repeat text-theme"></i>
-                            {% elif r.goal %}<i class="bi bi-bullseye text-theme"></i>
-                            {% else %}<i class="bi bi-bell text-theme"></i>{% endif %}
-                        </div>
-                        <div class="flex-1 flex-wrap ps-3">
-                            <div class="mb-1 text-inverse">{{ r.title|upper }}</div>
+                    <div id="hdr-reminder-{{ r.pk }}" class="dropdown-item d-flex align-items-center py-10px px-3" style="gap:8px;">
+                        <div class="flex-fill" style="min-width:0;">
+                            <div class="fw-bold fs-13px text-inverse text-truncate">{{ r.title }}</div>
                             <div class="small text-inverse text-opacity-50">{{ r.frequency|upper }}</div>
                         </div>
-                        <div class="ps-2 fs-16px">
-                            <i class="bi bi-chevron-right"></i>
-                        </div>
-                    </a>
+                        <button
+                            class="btn p-0 ms-auto text-inverse text-opacity-35"
+                            style="background:none; border:none; font-size:13px; cursor:pointer; flex-shrink:0;"
+                            title="Dismiss"
+                            onclick="dismissReminder({{ r.pk }}, 'hdr-reminder-{{ r.pk }}')">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
                     {% empty %}
                     <div class="py-10px px-3 text-center text-inverse text-opacity-40 fs-10px">
                         NO REMINDERS DUE
@@ -392,6 +390,30 @@
             if (descEl) descEl.textContent = 'UNAVAIL';
         });
 }());
+</script>
+
+
+<script>
+/* ── Reminder dismiss ───────────────────────────────────────────────────── */
+function dismissReminder(pk, rowId) {
+    const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+    fetch(`/api/reminders/${pk}/dismiss/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.dismissed) {
+            const row = document.getElementById(rowId);
+            if (row) {
+                row.style.transition = 'opacity 0.25s';
+                row.style.opacity    = '0';
+                setTimeout(() => row.remove(), 260);
+            }
+        }
+    })
+    .catch(err => console.error('Dismiss failed:', err));
+}
 </script>
 
 {# ── Page-specific JS goes here ───────────────────────────────────────── #}
