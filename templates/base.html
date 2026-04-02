@@ -242,7 +242,7 @@
 
                 {# TODO: swap href to {% url 'reminders:list' %} once reminders pages exist #}
                 <div class="menu-item {% if request.resolver_match.app_name == 'reminders' %}active{% endif %}">
-                    <a href="{% url 'admin:reminders_reminder_changelist' %}" class="menu-link">
+                    <a href="{% url 'reminders:list' %}" class="menu-link">
                         <span class="menu-icon"><i class="bi bi-bell"></i></span>
                         <span class="menu-text">Reminders</span>
                         {% if due_reminders_count > 0 %}
