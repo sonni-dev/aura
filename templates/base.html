@@ -231,7 +231,7 @@
 
                 {# TODO: swap href to {% url 'habits:list' %} once habits pages exist #}
                 <div class="menu-item {% if request.resolver_match.app_name == 'habits' %}active{% endif %}">
-                    <a href="{% url 'admin:habits_habit_changelist' %}" class="menu-link">
+                    <a href="{% url 'habits:list' %}" class="menu-link">
                         <span class="menu-icon"><i class="bi bi-graph-up"></i></span>
                         <span class="menu-text">Habits</span>
                         {% if habits_count > 0 %}

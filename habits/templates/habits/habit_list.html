@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+{% load static %}
+{% load aura_filters %}
+
+{% block title %}Aura | Habits{% endblock %}
+
+
+{% block content %}
+
+    <!-- Breadcrumb + Title ─────────────────────────────────────────────── -->
+    <div class="d-flex align-items-center mb-3">
+        <div>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard:hud' %}">DASHBOARD</a></li>
+                <li class="breadcrumb-item active">HABITS</li>
+            </ol>
+            <h1 class="page-header mb-0">Habits</h1>
+        </div>
+        <div class="ms-auto">
+            <a href="{% url 'admin:habits_habit_add' %}" class="btn btn-outline-theme btn-sm">
+                <i class="bi bi-plus-lg me-1"></i> Add Habit
+            </a>
+        </div>
+    </div>
+
+
+    <!-- ═══════════════════ STAT PILLS ══════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+
+        <div class="col-6 col-md-3">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold text-pink lh-1 mb-1">{{ total_count }}</div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Active Habits</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold lh-1 mb-1 {% if logged_today == total_count and total_count > 0 %}text-theme{% else %}text-pink{% endif %}">
+                    {{ logged_today }}<span class="fs-16px text-inverse text-opacity-30">/{{ total_count }}</span>
+                </div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Logged Today</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card text-center py-3 px-2 h-100">
+                {% if total_count > 0 %}
+                <div class="fs-24px fw-bold text-pink lh-1 mb-1">
+                    {{ logged_today|floatformat:0 }}{% if total_count %}<span class="fs-14px">%</span>{% endif %}
+                </div>
+                {% with pct=logged_today|floatformat:0 %}
+                <div class="fs-24px fw-bold text-pink lh-1 mb-1 d-none" id="todayPctStat">—</div>
+                {% endwith %}
+                {% endif %}
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Today's Rate</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold text-warning lh-1 mb-1">
+                    🔥 {{ total_streak }}
+                </div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Combined Streak</div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ═══════════════════ MAIN CARD ═══════════════════════════════════ -->
+    <div class="card">
+
+        <!-- Filter tabs -->
+        <ul class="nav nav-tabs nav-tabs-v2 px-4">
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link active px-2" data-filter="all">
+                    All
+                    <span class="badge bg-pink bg-opacity-20 text-pink ms-1 fs-10px px-2">{{ total_count }}</span>
+                </a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="logged">Logged Today</a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="unlogged">Not Yet Logged</a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="yn">Yes / No</a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="scale">Scale</a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="inactive">Inactive</a>
+            </li>
+        </ul>
+
+        <div class="p-4">
+
+            <!-- Search -->
+            <div class="input-group mb-4">
+                <div class="flex-fill position-relative">
+                    <input type="text" id="habitSearch" class="form-control px-35px"
+                           placeholder="Search habits...">
+                    <div class="input-group-text position-absolute top-0 bottom-0 bg-none border-0 start-0"
+                         style="z-index:1020;">
+                        <i class="fa fa-search opacity-5"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week-day header (Mon → Sun) -->
+            <div class="d-flex align-items-center mb-1 ps-0" id="weekHeader">
+                <!-- spacer matching name column -->
+                <div style="flex:0 0 260px;"></div>
+                <div class="d-flex gap-1 ms-3">
+                    {% for abbr in "Mo,Tu,We,Th,Fr,Sa,Su"|split:"," %}
+                    <div style="width:22px; text-align:center;"
+                         class="text-inverse text-opacity-25 fs-10px" style="font-family:'JetBrains Mono',monospace;">
+                        {{ abbr }}
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="ms-4" style="width:60px; text-align:center;"
+                     class="text-inverse text-opacity-25 fs-10px">STREAK</div>
+                <div style="width:60px; text-align:center;"
+                     class="text-inverse text-opacity-25 fs-10px">30D</div>
+            </div>
+
+            <!-- Habits table -->
+            <div class="table-responsive">
+                <table class="table table-hover" id="habitTable">
+                    <thead class="d-none"><tr><th></th><th></th><th></th><th></th><th></th></tr></thead>
+                    <tbody>
+
+                        {% for hd in habits_data %}
+                        <tr class="habit-row align-middle"
+                            data-metric="{{ hd.habit.metric_type }}"
+                            data-active="true"
+                            data-logged="{% if hd.is_logged %}true{% else %}false{% endif %}"
+                            data-name="{{ hd.habit.name|lower }}">
+
+                            <!-- Log toggle (yn) or link (scale) -->
+                            <td class="align-middle" style="width:40px;">
+                                {% if hd.habit.metric_type == 'yn' %}
+                                <button type="button"
+                                        class="btn btn-link p-0 border-0 bg-transparent habit-toggle"
+                                        data-habit-id="{{ hd.habit.pk }}"
+                                        data-metric="yn"
+                                        title="{% if hd.is_logged %}Logged today — click to undo{% else %}Mark done today{% endif %}">
+                                    {% if hd.is_logged %}
+                                    <i class="bi bi-check-circle-fill text-pink fs-18px"></i>
+                                    {% else %}
+                                    <i class="bi bi-circle text-inverse text-opacity-20 fs-18px"></i>
+                                    {% endif %}
+                                </button>
+                                {% else %}
+                                <!-- Scale habit: click circle opens scale input -->
+                                <button type="button"
+                                        class="btn btn-link p-0 border-0 bg-transparent habit-scale-open"
+                                        data-habit-id="{{ hd.habit.pk }}"
+                                        data-habit-name="{{ hd.habit.name|escapejs }}"
+                                        title="Log scale value for today">
+                                    {% if hd.is_logged %}
+                                    <i class="bi bi-check-circle-fill text-pink fs-18px"></i>
+                                    {% else %}
+                                    <i class="bi bi-circle text-inverse text-opacity-20 fs-18px"></i>
+                                    {% endif %}
+                                </button>
+                                {% endif %}
+                            </td>
+
+                            <!-- Name + category -->
+                            <td class="align-middle" style="min-width:220px;">
+                                <a href="{% url 'habits:detail' hd.habit.pk %}"
+                                   class="fw-semibold text-inverse text-decoration-none">
+                                    {{ hd.habit.name }}
+                                </a>
+                                <div class="d-flex align-items-center gap-2 mt-1">
+                                    {% if hd.habit.category %}
+                                    <span class="badge bg-inverse bg-opacity-15 text-inverse text-opacity-50 px-2 py-1 rounded fs-10px">
+                                        {{ hd.habit.get_category_display }}
+                                    </span>
+                                    {% endif %}
+                                    <span class="badge {% if hd.habit.metric_type == 'yn' %}bg-pink{% else %}bg-info{% endif %} bg-opacity-15 {% if hd.habit.metric_type == 'yn' %}text-pink{% else %}text-info{% endif %} px-2 py-1 rounded fs-10px">
+                                        {{ hd.habit.get_metric_type_display }}
+                                    </span>
+                                </div>
+                            </td>
+
+                            <!-- 7-day dot strip -->
+                            <td class="align-middle">
+                                <div class="d-flex gap-1">
+                                    {% for cell in hd.week_cells %}
+                                    <div title="{{ cell.day|date:'D, M j' }}{% if cell.state == 'yes' %} — ✓{% elif cell.state == 'no' %} — ✗{% elif cell.state == 'scale' %} — {{ cell.value }}/10{% endif %}"
+                                         style="width:22px; height:22px; border-radius:3px;
+                                         {% if cell.state == 'yes' %}background:rgba(236,72,153,0.75);
+                                         {% elif cell.state == 'no' %}background:rgba(239,68,68,0.25);
+                                         {% elif cell.state == 'scale' and cell.value %}background:rgba(236,72,153,{{ cell.value|floatformat:2 }}0);
+                                         {% else %}background:rgba(255,255,255,0.05);{% endif %}
+                                         {% if cell.day == today %}outline:2px solid rgba(236,72,153,.5);outline-offset:1px;{% endif %}">
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </td>
+
+                            <!-- Streak -->
+                            <td class="align-middle text-center" style="width:70px;">
+                                {% if hd.streak > 0 %}
+                                <span class="text-warning fs-13px fw-600">🔥 {{ hd.streak }}</span>
+                                {% else %}
+                                <span class="text-inverse text-opacity-25 fs-13px">—</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- 30-day rate -->
+                            <td class="align-middle text-center" style="width:70px;">
+                                <span class="fs-13px fw-600
+                                    {% if hd.comp_rate >= 70 %}text-theme
+                                    {% elif hd.comp_rate >= 40 %}text-warning
+                                    {% else %}text-danger{% endif %}">
+                                    {{ hd.comp_rate }}%
+                                </span>
+                            </td>
+
+                            <!-- Detail link -->
+                            <td class="align-middle text-end" style="width:40px;">
+                                <a href="{% url 'habits:detail' hd.habit.pk %}"
+                                   class="text-pink text-opacity-50 text-decoration-none"
+                                   title="View detail">
+                                    <i class="bi bi-arrow-right-circle fs-13px"></i>
+                                </a>
+                            </td>
+
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-inverse text-opacity-40 py-5">
+                                <i class="bi bi-graph-up fs-28px d-block mb-2 text-pink text-opacity-30"></i>
+                                No habits yet — add one above.
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        <!-- Inactive rows -->
+                        {% for h in inactive %}
+                        <tr class="habit-row align-middle"
+                            data-metric="{{ h.metric_type }}"
+                            data-active="false"
+                            data-logged="false"
+                            data-name="{{ h.name|lower }}">
+                            <td><i class="bi bi-archive text-inverse text-opacity-20 fs-16px"></i></td>
+                            <td colspan="4">
+                                <span class="text-inverse text-opacity-25 text-decoration-line-through">{{ h.name }}</span>
+                                <span class="text-inverse text-opacity-20 fs-11px ms-2">Inactive</span>
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'admin:habits_habit_change' h.pk %}"
+                                   class="text-inverse text-opacity-20 text-decoration-none">
+                                    <i class="bi bi-pencil fs-13px"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- ═══════════════ SCALE LOG MODAL ════════════════════════════════ -->
+    <div class="modal fade" id="scaleModal" tabindex="-1" aria-labelledby="scaleModalLabel">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border border-inverse border-opacity-15"
+                 style="background:var(--bs-body-bg);">
+                <div class="modal-header border-bottom border-inverse border-opacity-10">
+                    <h5 class="modal-title text-inverse fs-14px text-uppercase fw-bold"
+                        id="scaleModalLabel">Log Today</h5>
+                    <button type="button" class="btn-close btn-close-white opacity-50"
+                            data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <input type="hidden" id="scaleHabitId" value="">
+                    <p class="text-inverse text-opacity-60 fs-13px mb-3" id="scaleHabitName"></p>
+                    <p class="text-inverse text-opacity-40 fs-12px mb-3">Rate 1 (low) → 10 (high)</p>
+                    <div class="d-flex justify-content-center gap-2 flex-wrap mb-2">
+                        {% for i in "1,2,3,4,5,6,7,8,9,10"|split:"," %}
+                        <button type="button"
+                                class="btn btn-sm btn-outline-default scale-btn"
+                                data-value="{{ i }}"
+                                style="width:38px; padding:4px 0;">
+                            {{ i }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                    <div id="scaleError" class="text-danger fs-12px mt-2 d-none"></div>
+                </div>
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+(function () {
+    'use strict';
+
+    var CSRF = document.querySelector('meta[name="csrf-token"]').content;
+
+    // ── Filter state ─────────────────────────────────────────────────────
+    var rows         = document.querySelectorAll('.habit-row');
+    var searchEl     = document.getElementById('habitSearch');
+    var tabs         = document.querySelectorAll('[data-filter]');
+    var activeFilter = 'all';
+    var searchTerm   = '';
+
+    function rowMatchesTab(row) {
+        if (activeFilter === 'inactive')  return row.dataset.active  === 'false';
+        if (row.dataset.active === 'false') return false;
+        switch (activeFilter) {
+            case 'all':      return true;
+            case 'logged':   return row.dataset.logged === 'true';
+            case 'unlogged': return row.dataset.logged === 'false';
+            case 'yn':       return row.dataset.metric === 'yn';
+            case 'scale':    return row.dataset.metric === 'scale';
+            default:         return true;
+        }
+    }
+
+    function applyFilters() {
+        rows.forEach(function (row) {
+            var tabOk    = rowMatchesTab(row);
+            var searchOk = !searchTerm || (row.dataset.name || '').includes(searchTerm);
+            row.classList.toggle('d-none', !(tabOk && searchOk));
+        });
+    }
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function (e) {
+            e.preventDefault();
+            tabs.forEach(function (t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            activeFilter = tab.dataset.filter;
+            applyFilters();
+        });
+    });
+
+    searchEl.addEventListener('input', function () {
+        searchTerm = searchEl.value.toLowerCase().trim();
+        applyFilters();
+    });
+
+    applyFilters();
+
+    // ── YN toggle ────────────────────────────────────────────────────────
+    document.querySelectorAll('.habit-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var habitId = this.dataset.habitId;
+            var icon    = this.querySelector('i');
+            var row     = this.closest('tr');
+            var wasLogged = icon.classList.contains('bi-check-circle-fill');
+
+            // Optimistic
+            icon.className = wasLogged
+                ? 'bi bi-circle text-inverse text-opacity-20 fs-18px'
+                : 'bi bi-check-circle-fill text-pink fs-18px';
+            row.dataset.logged = wasLogged ? 'false' : 'true';
+
+            fetch('/habits/' + habitId + '/log/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF },
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.error) {
+                    // Revert
+                    icon.className = wasLogged
+                        ? 'bi bi-check-circle-fill text-pink fs-18px'
+                        : 'bi bi-circle text-inverse text-opacity-20 fs-18px';
+                    row.dataset.logged = wasLogged ? 'true' : 'false';
+                }
+            })
+            .catch(function () {
+                icon.className = wasLogged
+                    ? 'bi bi-check-circle-fill text-pink fs-18px'
+                    : 'bi bi-circle text-inverse text-opacity-20 fs-18px';
+                row.dataset.logged = wasLogged ? 'true' : 'false';
+            });
+        });
+    });
+
+    // ── Scale: open modal ────────────────────────────────────────────────
+    document.querySelectorAll('.habit-scale-open').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('scaleHabitId').value   = this.dataset.habitId;
+            document.getElementById('scaleHabitName').textContent = this.dataset.habitName;
+            document.getElementById('scaleError').classList.add('d-none');
+            document.querySelectorAll('.scale-btn').forEach(function (b) {
+                b.classList.remove('btn-pink', 'active');
+                b.classList.add('btn-outline-default');
+            });
+            var modal = new bootstrap.Modal(document.getElementById('scaleModal'));
+            modal.show();
+        });
+    });
+
+    // ── Scale: pick a value ──────────────────────────────────────────────
+    document.querySelectorAll('.scale-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var habitId = document.getElementById('scaleHabitId').value;
+            var value   = parseInt(this.dataset.value);
+
+            // Highlight selection
+            document.querySelectorAll('.scale-btn').forEach(function (b) {
+                b.classList.remove('active');
+            });
+            this.classList.add('active');
+
+            fetch('/habits/' + habitId + '/log/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value: value }),
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.error) {
+                    document.getElementById('scaleError').textContent = data.error;
+                    document.getElementById('scaleError').classList.remove('d-none');
+                    return;
+                }
+                // Close modal and reload to sync dots
+                bootstrap.Modal.getInstance(document.getElementById('scaleModal')).hide();
+                window.location.reload();
+            })
+            .catch(function () {
+                document.getElementById('scaleError').textContent = 'Something went wrong.';
+                document.getElementById('scaleError').classList.remove('d-none');
+            });
+        });
+    });
+
+}());
+</script>
+{% endblock extra_scripts %}

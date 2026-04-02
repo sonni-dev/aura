@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+{% load static %}
+{% load aura_filters %}
+
+{% block title %}Aura | {{ habit.name }}{% endblock %}
+
+
+{% block content %}
+
+    <!-- Breadcrumb + Title ─────────────────────────────────────────────── -->
+    <div class="d-flex align-items-center mb-3">
+        <div>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard:hud' %}">DASHBOARD</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'habits:list' %}">HABITS</a></li>
+                <li class="breadcrumb-item active">{{ habit.name|upper }}</li>
+            </ol>
+            <h1 class="page-header mb-0">{{ habit.name }}</h1>
+        </div>
+    </div>
+
+    <!-- Action bar -->
+    <div class="mb-3 d-md-flex fw-bold gap-4">
+        <div class="mt-md-0 mt-2">
+            <a href="{% url 'admin:habits_habit_change' habit.pk %}"
+               class="text-decoration-none text-inverse">
+                <i class="bi bi-pen fa-fw me-1 text-inverse text-opacity-50"></i> Edit Habit
+            </a>
+        </div>
+        <div class="mt-md-0 mt-2 ms-md-auto">
+            <a href="{% url 'habits:list' %}" class="text-decoration-none text-inverse text-opacity-50">
+                <i class="bi bi-arrow-left fa-fw me-1"></i> Back to Habits
+            </a>
+        </div>
+    </div>
+
+
+    <!-- ═══════════════════ TWO-COLUMN LAYOUT ═══════════════════════════ -->
+    <div class="row gx-4">
+
+        <!-- ────────────────── LEFT COLUMN ──────────────────────────── -->
+        <div class="col-lg-8">
+
+            <!-- ════ 91-Day Heatmap Card ══════════════════════════════ -->
+            <div class="card mb-4">
+                <div class="card-header bg-inverse bg-opacity-10 fw-400 d-flex align-items-center">
+                    <span>Activity — Last 13 Weeks</span>
+                    <!-- Legend -->
+                    <div class="ms-auto d-flex align-items-center gap-3 fs-11px text-inverse text-opacity-40">
+                        {% if habit.metric_type == 'yn' %}
+                        <span class="d-flex align-items-center gap-1">
+                            <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:rgba(236,72,153,0.75);"></span> Done
+                        </span>
+                        <span class="d-flex align-items-center gap-1">
+                            <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:rgba(239,68,68,0.25);"></span> Missed
+                        </span>
+                        <span class="d-flex align-items-center gap-1">
+                            <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:rgba(255,255,255,0.05);"></span> No log
+                        </span>
+                        {% else %}
+                        <span class="d-flex align-items-center gap-1">
+                            <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:rgba(236,72,153,0.15);"></span> Low
+                        </span>
+                        <span class="d-flex align-items-center gap-1">
+                            <span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:rgba(236,72,153,0.90);"></span> High
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body pt-3 pb-4 px-4">
+
+                    <!-- Day-of-week headers -->
+                    <div class="d-flex gap-1 mb-1">
+                        {% for abbr in "Mo,Tu,We,Th,Fr,Sa,Su"|split:"," %}
+                        <div style="width:22px; text-align:center;"
+                             class="text-inverse text-opacity-25 fs-10px">{{ abbr }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Heatmap grid — 7 cols × N weeks using CSS grid -->
+                    <div style="display:grid; grid-template-columns:repeat(7,22px); gap:3px;">
+                        {% for gd in grid_days %}
+                        <div title="{{ gd.date|date:'D, M j, Y' }}{% if gd.cell_type == 'yes' %} — ✓ Done{% elif gd.cell_type == 'no' %} — ✗ Missed{% elif gd.cell_type == 'scale' and gd.scale_value %} — {{ gd.scale_value }}/10{% elif gd.cell_type == 'empty' and gd.in_range %} — No log{% endif %}"
+                             style="width:22px; height:22px; border-radius:3px;
+                             {% if gd.cell_type == 'pad' %}
+                                 background:transparent;
+                             {% elif gd.cell_type == 'yes' %}
+                                 background:rgba(236,72,153,0.80);
+                             {% elif gd.cell_type == 'no' %}
+                                 background:rgba(239,68,68,0.28);
+                             {% elif gd.cell_type == 'scale' %}
+                                 background:rgba(236,72,153,{{ gd.scale_opacity }});
+                             {% else %}
+                                 background:rgba(255,255,255,0.05);
+                             {% endif %}
+                             {% if gd.is_today %}outline:2px solid rgba(236,72,153,0.6);outline-offset:1px;{% endif %}">
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Month labels row (derived from first cell of each month transition) -->
+                    <div class="d-flex gap-1 mt-2" style="overflow:hidden;">
+                        {% for gd in grid_days %}
+                            {% if gd.date.day == 1 or forloop.first %}
+                            <span class="text-inverse text-opacity-30 fs-10px"
+                                  style="font-family:'JetBrains Mono',monospace; white-space:nowrap;">
+                                {{ gd.date|date:"M" }}
+                            </span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                </div>
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
+                </div>
+            </div>
+
+            <!-- ════ Recent Log History Card ═══════════════════════════ -->
+            <div class="card mb-4">
+                <div class="card-header bg-inverse bg-opacity-10 fw-400 fs-13px">
+                    Recent Logs
+                    <span class="text-inverse text-opacity-40 ms-1">(last 30 days)</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_logs %}
+                    <table class="table table-hover m-0 fs-13px">
+                        <thead>
+                            <tr class="text-inverse text-opacity-40 fs-11px text-uppercase">
+                                <th class="border-top-0 pt-3 pb-2 ps-4">Date</th>
+                                <th class="border-top-0 pt-3 pb-2">Value</th>
+                                <th class="border-top-0 pt-3 pb-2">Day</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in recent_logs %}
+                            <tr class="align-middle">
+                                <td class="ps-4 py-2">
+                                    <span class="{% if log.logged_on == today %}text-pink fw-600{% else %}text-inverse text-opacity-70{% endif %}">
+                                        {{ log.logged_on|date:"M j, Y" }}
+                                        {% if log.logged_on == today %}<span class="badge bg-pink bg-opacity-20 text-pink ms-1 fs-10px">TODAY</span>{% endif %}
+                                    </span>
+                                </td>
+                                <td class="py-2">
+                                    {% with v=log.display_value %}
+                                    {% if v == 'yes' %}
+                                    <span class="text-theme fw-600"><i class="bi bi-check-circle-fill me-1"></i>Yes</span>
+                                    {% elif v == 'no' %}
+                                    <span class="text-danger fw-600"><i class="bi bi-x-circle me-1"></i>No</span>
+                                    {% else %}
+                                    <span class="text-pink fw-600">{{ v }}<span class="text-inverse text-opacity-30">/10</span></span>
+                                    {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td class="py-2 text-inverse text-opacity-40">
+                                    {{ log.logged_on|date:"l" }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="text-center py-5 text-inverse text-opacity-30 fs-13px">
+                        No logs recorded yet.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
+                </div>
+            </div>
+
+        </div>
+        <!-- END left column -->
+
+
+        <!-- ────────────────── RIGHT COLUMN ─────────────────────────── -->
+        <div class="col-lg-4">
+
+            <!-- ════ Log Today Card ═══════════════════════════════════ -->
+            <div class="card mb-4">
+                <div class="card-header bg-inverse bg-opacity-10 fw-400 fs-13px">
+                    Log Today
+                    <span class="text-inverse text-opacity-30 ms-1">— {{ today|date:"M j, Y" }}</span>
+                </div>
+                <div class="card-body text-center py-4">
+
+                    {% if habit.metric_type == 'yn' %}
+                        <!-- YN habit -->
+                        <div class="mb-3">
+                            {% if is_logged %}
+                            <i class="bi bi-check-circle-fill text-pink fs-40px"></i>
+                            <div class="fs-13px text-inverse text-opacity-50 mt-2">Logged today ✓</div>
+                            {% else %}
+                            <i class="bi bi-circle text-inverse text-opacity-20 fs-40px"></i>
+                            <div class="fs-13px text-inverse text-opacity-40 mt-2">Not logged yet</div>
+                            {% endif %}
+                        </div>
+                        <button type="button"
+                                class="btn {% if is_logged %}btn-outline-default{% else %}btn-outline-theme{% endif %} btn-sm"
+                                id="logTodayBtn"
+                                data-habit-id="{{ habit.pk }}">
+                            {% if is_logged %}
+                            <i class="bi bi-x me-1"></i> Undo Today's Log
+                            {% else %}
+                            <i class="bi bi-check2 me-1"></i> Mark Done Today
+                            {% endif %}
+                        </button>
+
+                    {% else %}
+                        <!-- Scale habit -->
+                        {% if is_logged %}
+                        <div class="fs-40px fw-bold text-pink lh-1 mb-1">
+                            {{ today_log.scale_value }}<span class="fs-18px text-inverse text-opacity-30">/10</span>
+                        </div>
+                        <div class="fs-13px text-inverse text-opacity-50 mb-3">Logged today</div>
+                        {% else %}
+                        <div class="text-inverse text-opacity-30 mb-3 fs-13px">Not logged yet</div>
+                        {% endif %}
+
+                        <p class="text-inverse text-opacity-40 fs-12px mb-2">Rate 1 (low) → 10 (high)</p>
+                        <div class="d-flex justify-content-center gap-2 flex-wrap">
+                            {% for i in "1,2,3,4,5,6,7,8,9,10"|split:"," %}
+                            <button type="button"
+                                    class="btn btn-sm {% if today_log and today_log.scale_value == i|add:0 %}btn-pink{% else %}btn-outline-default{% endif %} scale-btn-detail"
+                                    data-value="{{ i }}"
+                                    data-habit-id="{{ habit.pk }}"
+                                    style="width:38px; padding:4px 0;">
+                                {{ i }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                        <div id="scaleDetailError" class="text-danger fs-12px mt-2 d-none"></div>
+                    {% endif %}
+
+                </div>
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
+                </div>
+            </div>
+
+            <!-- ════ Stats Card ═══════════════════════════════════════ -->
+            <div class="card mb-4">
+                <div class="card-header bg-inverse bg-opacity-10 fw-400 fs-13px">Stats</div>
+                <div class="card-body py-3 px-4">
+                    <table class="table table-borderless table-sm m-0 fs-13px">
+                        <tbody>
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 fw-600 fs-11px text-uppercase" style="width:50%;">Current Streak</td>
+                                <td class="pe-0">
+                                    {% if streak > 0 %}
+                                    <span class="text-warning fw-600">🔥 {{ streak }} day{{ streak|pluralize }}</span>
+                                    {% else %}
+                                    <span class="text-inverse text-opacity-30">None</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 fw-600 fs-11px text-uppercase">7-Day Rate</td>
+                                <td class="pe-0">
+                                    <span class="fw-600
+                                        {% if comp_rate_7 >= 70 %}text-theme
+                                        {% elif comp_rate_7 >= 40 %}text-warning
+                                        {% else %}text-danger{% endif %}">
+                                        {{ comp_rate_7 }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 fw-600 fs-11px text-uppercase">30-Day Rate</td>
+                                <td class="pe-0">
+                                    <span class="fw-600
+                                        {% if comp_rate_30 >= 70 %}text-theme
+                                        {% elif comp_rate_30 >= 40 %}text-warning
+                                        {% else %}text-danger{% endif %}">
+                                        {{ comp_rate_30 }}%
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 fw-600 fs-11px text-uppercase">Type</td>
+                                <td class="pe-0 text-inverse text-opacity-70">{{ habit.get_metric_type_display }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 fw-600 fs-11px text-uppercase">Frequency</td>
+                                <td class="pe-0 text-inverse text-opacity-70">{{ habit.get_frequency_display }}</td>
+                            </tr>
+                            {% if habit.category %}
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 fw-600 fs-11px text-uppercase">Category</td>
+                                <td class="pe-0 text-inverse text-opacity-70">{{ habit.get_category_display }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 fw-600 fs-11px text-uppercase">Tracking Since</td>
+                                <td class="pe-0 text-inverse text-opacity-70">{{ habit.start_date|date:"M j, Y" }}</td>
+                            </tr>
+                            {% if habit.description %}
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 fw-600 fs-11px text-uppercase align-top">Notes</td>
+                                <td class="pe-0 text-inverse text-opacity-60">{{ habit.description }}</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
+                </div>
+            </div>
+
+        </div>
+        <!-- END right column -->
+
+    </div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+(function () {
+    'use strict';
+    var CSRF = document.querySelector('meta[name="csrf-token"]').content;
+
+    // ── YN log today button ───────────────────────────────────────────────
+    var logBtn = document.getElementById('logTodayBtn');
+    if (logBtn) {
+        logBtn.addEventListener('click', function () {
+            var habitId = this.dataset.habitId;
+            fetch('/habits/' + habitId + '/log/', {
+                method:  'POST',
+                headers: { 'X-CSRFToken': CSRF },
+            })
+            .then(function (r) { return r.json(); })
+            .then(function () { window.location.reload(); })
+            .catch(function (err) { console.error('Log failed:', err); });
+        });
+    }
+
+    // ── Scale log buttons (detail page) ──────────────────────────────────
+    document.querySelectorAll('.scale-btn-detail').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var habitId = this.dataset.habitId;
+            var value   = parseInt(this.dataset.value);
+            var errEl   = document.getElementById('scaleDetailError');
+
+            // Highlight
+            document.querySelectorAll('.scale-btn-detail').forEach(function (b) {
+                b.classList.remove('btn-pink');
+                b.classList.add('btn-outline-default');
+            });
+            this.classList.remove('btn-outline-default');
+            this.classList.add('btn-pink');
+
+            fetch('/habits/' + habitId + '/log/', {
+                method:  'POST',
+                headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ value: value }),
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.error) {
+                    if (errEl) { errEl.textContent = data.error; errEl.classList.remove('d-none'); }
+                    return;
+                }
+                window.location.reload();
+            })
+            .catch(function () {
+                if (errEl) { errEl.textContent = 'Something went wrong.'; errEl.classList.remove('d-none'); }
+            });
+        });
+    });
+
+}());
+</script>
+{% endblock extra_scripts %}
