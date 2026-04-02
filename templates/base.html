@@ -220,7 +220,7 @@
 
                 {# TODO: swap href to {% url 'goals:list' %} once goals pages exist #}
                 <div class="menu-item {% if request.resolver_match.app_name == 'goals' %}active{% endif %}">
-                    <a href="{% url 'admin:goals_goal_changelist' %}" class="menu-link">
+                    <a href="{% url 'goals:list' %}" class="menu-link">
                         <span class="menu-icon"><i class="bi bi-bullseye"></i></span>
                         <span class="menu-text">Goals</span>
                         {% if goals_count > 0 %}

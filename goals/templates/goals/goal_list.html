@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Aura | Goals{% endblock %}
+
+
+{% block content %}
+
+    <!-- Breadcrumb + Title ─────────────────────────────────────────────── -->
+    <div class="d-flex align-items-center mb-3">
+        <div>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard:hud' %}">DASHBOARD</a></li>
+                <li class="breadcrumb-item active">GOALS</li>
+            </ol>
+            <h1 class="page-header mb-0">Goals</h1>
+        </div>
+        <div class="ms-auto">
+            <a href="{% url 'admin:goals_goal_add' %}" class="btn btn-outline-theme btn-sm">
+                <i class="bi bi-plus-lg me-1"></i> Add Goal
+            </a>
+        </div>
+    </div>
+
+
+    <!-- ═══════════════════ STAT PILLS ══════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+
+        <div class="col-6 col-md-4 col-xl">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold text-info lh-1 mb-1">{{ total_active }}</div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Active</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl">
+            <div class="card text-center py-3 px-2 h-100{% if overdue_count %} border border-danger border-opacity-50{% endif %}">
+                <div class="fs-24px fw-bold lh-1 mb-1 {% if overdue_count %}text-danger{% else %}text-inverse text-opacity-25{% endif %}">
+                    {{ overdue_count }}
+                </div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Overdue</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold text-info lh-1 mb-1">{{ in_progress_count }}</div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">In Progress</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold lh-1 mb-1 {% if stalled_count %}text-warning{% else %}text-inverse text-opacity-25{% endif %}">
+                    {{ stalled_count }}
+                </div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Stalled</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold text-theme lh-1 mb-1">{{ complete_count }}</div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Complete</div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ═══════════════════ MAIN CARD ═══════════════════════════════════ -->
+    <div class="card">
+
+        <!-- Filter tabs -->
+        <ul class="nav nav-tabs nav-tabs-v2 px-4">
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link active px-2" data-filter="all">
+                    All
+                    <span class="badge bg-info bg-opacity-20 text-info ms-1 fs-10px px-2">{{ total_active }}</span>
+                </a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="overdue">
+                    Overdue
+                    {% if overdue_count %}<span class="badge bg-danger bg-opacity-20 text-danger ms-1 fs-10px px-2">{{ overdue_count }}</span>{% endif %}
+                </a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="in_progress">In Progress</a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="stalled">
+                    Stalled
+                    {% if stalled_count %}<span class="badge bg-warning bg-opacity-20 text-warning ms-1 fs-10px px-2">{{ stalled_count }}</span>{% endif %}
+                </a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="complete">Complete</a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="inactive">Back Burner</a>
+            </li>
+        </ul>
+
+        <div class="p-4">
+
+            <!-- Search + filter dropdowns -->
+            <div class="input-group mb-4">
+                <div class="flex-fill position-relative">
+                    <input type="text" id="goalSearch" class="form-control px-35px"
+                           placeholder="Search goals...">
+                    <div class="input-group-text position-absolute top-0 bottom-0 bg-none border-0 start-0"
+                         style="z-index:1020;">
+                        <i class="fa fa-search opacity-5"></i>
+                    </div>
+                </div>
+
+                <button class="btn btn-outline-default dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown" id="priorityFilterBtn">
+                    <span class="d-none d-md-inline">Priority</span>
+                    <span class="d-inline d-md-none"><i class="bi bi-flag"></i></span>&nbsp;
+                </button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="#" data-priority-filter="">All Priorities</a>
+                    <a class="dropdown-item" href="#" data-priority-filter="high"><span class="text-danger me-1">●</span> High</a>
+                    <a class="dropdown-item" href="#" data-priority-filter="medium"><span class="text-warning me-1">●</span> Medium</a>
+                    <a class="dropdown-item" href="#" data-priority-filter="low"><span class="text-secondary me-1">●</span> Low</a>
+                </div>
+
+                <button class="btn btn-outline-default dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown" id="categoryFilterBtn">
+                    <span class="d-none d-md-inline">Category</span>
+                    <span class="d-inline d-md-none"><i class="bi bi-tag"></i></span>&nbsp;
+                </button>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <a class="dropdown-item" href="#" data-category-filter="">All Categories</a>
+                    <div class="dropdown-divider"></div>
+                    {% for code, label in category_choices %}
+                    <a class="dropdown-item" href="#" data-category-filter="{{ code }}">{{ label }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-responsive">
+                <table class="table table-hover text-nowrap" id="goalTable">
+                    <thead>
+                        <tr>
+                            <th class="border-top-0 pt-0 pb-2" style="width:32%;">Goal</th>
+                            <th class="border-top-0 pt-0 pb-2">Category</th>
+                            <th class="border-top-0 pt-0 pb-2">Priority</th>
+                            <th class="border-top-0 pt-0 pb-2" style="min-width:160px;">Progress</th>
+                            <th class="border-top-0 pt-0 pb-2 text-center">Items</th>
+                            <th class="border-top-0 pt-0 pb-2">Due</th>
+                            <th class="border-top-0 pt-0 pb-2">Last Activity</th>
+                            <th class="border-top-0 pt-0 pb-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        {% for gd in goals_data %}
+                        {% with g=gd.goal %}
+                        <tr class="goal-row align-middle"
+                            data-priority="{{ g.priority }}"
+                            data-category="{{ g.category }}"
+                            data-active="true"
+                            data-overdue="{% if g.is_overdue %}true{% else %}false{% endif %}"
+                            data-complete="{% if g.is_complete %}true{% else %}false{% endif %}"
+                            data-stalled="{% if gd.is_stalled %}true{% else %}false{% endif %}"
+                            data-in-progress="{% if gd.item_done > 0 and not g.is_complete %}true{% else %}false{% endif %}"
+                            data-name="{{ g.name|lower }}">
+
+                            <!-- Goal name -->
+                            <td class="align-middle">
+                                <a href="{% url 'goals:detail' g.pk %}"
+                                   class="fw-semibold text-inverse text-decoration-none{% if g.is_complete %} text-opacity-40{% endif %}">
+                                    {{ g.name }}
+                                </a>
+                                {% if g.description %}
+                                <div class="fs-12px text-inverse text-opacity-40 text-truncate" style="max-width:300px;">
+                                    {{ g.description }}
+                                </div>
+                                {% endif %}
+                            </td>
+
+                            <!-- Category -->
+                            <td class="align-middle">
+                                {% if g.category %}
+                                <span class="badge bg-inverse bg-opacity-15 text-inverse text-opacity-60 px-2 py-1 rounded fs-11px">
+                                    {{ g.get_category_display }}
+                                </span>
+                                {% else %}
+                                <span class="text-inverse text-opacity-25 fs-12px">—</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Priority -->
+                            <td class="align-middle">
+                                {% if g.priority == 'high' %}
+                                <span class="text-danger fw-600 fs-12px"><i class="bi bi-chevron-double-up me-1"></i>High</span>
+                                {% elif g.priority == 'medium' %}
+                                <span class="text-warning fw-600 fs-12px"><i class="bi bi-chevron-up me-1"></i>Medium</span>
+                                {% else %}
+                                <span class="text-inverse text-opacity-40 fw-600 fs-12px"><i class="bi bi-chevron-down me-1"></i>Low</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Progress bar -->
+                            <td class="align-middle">
+                                {% if gd.item_total > 0 %}
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="flex-fill" style="min-width:90px;">
+                                        <div class="progress" style="height:6px; background:rgba(255,255,255,0.08);">
+                                            <div class="progress-bar {% if gd.pct == 100 %}bg-theme{% elif gd.pct >= 50 %}bg-info{% else %}bg-info bg-opacity-50{% endif %}"
+                                                 style="width:{{ gd.pct }}%;"></div>
+                                        </div>
+                                    </div>
+                                    <span class="fs-11px text-inverse text-opacity-50 flex-shrink-0">{{ gd.pct }}%</span>
+                                </div>
+                                {% else %}
+                                <span class="text-inverse text-opacity-25 fs-12px">No items</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Items count -->
+                            <td class="align-middle text-center">
+                                <span class="fs-13px text-inverse text-opacity-60">
+                                    {{ gd.item_done }}<span class="text-inverse text-opacity-30">/{{ gd.item_total }}</span>
+                                </span>
+                            </td>
+
+                            <!-- Due date -->
+                            <td class="align-middle">
+                                {% if g.due_date %}
+                                    {% if g.is_overdue %}
+                                    <span class="text-danger fw-600 fs-12px">
+                                        <i class="bi bi-exclamation-circle me-1"></i>{{ g.due_date|date:"M j" }}
+                                    </span>
+                                    {% elif g.due_date == today %}
+                                    <span class="text-warning fw-600 fs-12px">
+                                        <i class="bi bi-calendar-check me-1"></i>Today
+                                    </span>
+                                    {% else %}
+                                    <span class="text-inverse text-opacity-60 fs-12px">{{ g.due_date|date:"M j, Y" }}</span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="text-inverse text-opacity-25 fs-12px">—</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Last activity / stall indicator -->
+                            <td class="align-middle">
+                                {% if g.last_progress %}
+                                    {% if gd.is_stalled %}
+                                    <span class="text-warning fs-12px" title="{{ g.days_since_progress }} days ago">
+                                        <i class="bi bi-hourglass-split me-1"></i>{{ g.days_since_progress }}d ago
+                                    </span>
+                                    {% else %}
+                                    <span class="text-inverse text-opacity-50 fs-12px">{{ g.last_progress|date:"M j" }}</span>
+                                    {% endif %}
+                                {% elif gd.item_total > 0 %}
+                                <span class="text-inverse text-opacity-25 fs-12px">Not started</span>
+                                {% else %}
+                                <span class="text-inverse text-opacity-25 fs-12px">—</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Actions -->
+                            <td class="align-middle text-end">
+                                <a href="{% url 'goals:detail' g.pk %}"
+                                   class="text-info text-opacity-60 text-decoration-none me-2"
+                                   title="View goal">
+                                    <i class="bi bi-arrow-right-circle fs-13px"></i>
+                                </a>
+                                <a href="{% url 'admin:goals_goal_change' g.pk %}"
+                                   class="text-inverse text-opacity-40 text-decoration-none"
+                                   title="Edit in admin">
+                                    <i class="bi bi-pencil fs-13px"></i>
+                                </a>
+                            </td>
+
+                        </tr>
+                        {% endwith %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-inverse text-opacity-40 py-5">
+                                <i class="bi bi-bullseye fs-28px d-block mb-2 text-info text-opacity-30"></i>
+                                No active goals — add one above.
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        <!-- Inactive / back-burner rows -->
+                        {% for g in inactive %}
+                        <tr class="goal-row align-middle"
+                            data-priority="{{ g.priority }}"
+                            data-category="{{ g.category }}"
+                            data-active="false"
+                            data-overdue="false"
+                            data-complete="false"
+                            data-stalled="false"
+                            data-in-progress="false"
+                            data-name="{{ g.name|lower }}">
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-archive text-inverse text-opacity-20 flex-shrink-0"></i>
+                                    <a href="{% url 'goals:detail' g.pk %}"
+                                       class="fw-semibold text-inverse text-opacity-30 text-decoration-none text-decoration-line-through">
+                                        {{ g.name }}
+                                    </a>
+                                </div>
+                            </td>
+                            <td colspan="5">
+                                <span class="text-inverse text-opacity-25 fs-12px">Back Burner</span>
+                            </td>
+                            <td></td>
+                            <td class="align-middle text-end">
+                                <a href="{% url 'admin:goals_goal_change' g.pk %}"
+                                   class="text-inverse text-opacity-25 text-decoration-none"
+                                   title="Edit in admin">
+                                    <i class="bi bi-pencil fs-13px"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+(function () {
+    'use strict';
+
+    var rows     = document.querySelectorAll('.goal-row');
+    var searchEl = document.getElementById('goalSearch');
+    var tabs     = document.querySelectorAll('[data-filter]');
+
+    var activeFilter   = 'all';
+    var priorityFilter = '';
+    var categoryFilter = '';
+    var searchTerm     = '';
+
+    function rowMatchesTab(row) {
+        if (activeFilter === 'inactive') return row.dataset.active === 'false';
+        if (row.dataset.active === 'false') return false;
+        switch (activeFilter) {
+            case 'all':         return true;
+            case 'overdue':     return row.dataset.overdue     === 'true';
+            case 'in_progress': return row.dataset.inProgress  === 'true';
+            case 'stalled':     return row.dataset.stalled     === 'true';
+            case 'complete':    return row.dataset.complete    === 'true';
+            default:            return true;
+        }
+    }
+
+    function applyFilters() {
+        rows.forEach(function (row) {
+            var tabOk    = rowMatchesTab(row);
+            var priOk    = !priorityFilter || row.dataset.priority === priorityFilter;
+            var catOk    = !categoryFilter || row.dataset.category === categoryFilter;
+            var searchOk = !searchTerm     || (row.dataset.name || '').includes(searchTerm);
+            row.classList.toggle('d-none', !(tabOk && priOk && catOk && searchOk));
+        });
+    }
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function (e) {
+            e.preventDefault();
+            tabs.forEach(function (t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            activeFilter = tab.dataset.filter;
+            applyFilters();
+        });
+    });
+
+    searchEl.addEventListener('input', function () {
+        searchTerm = searchEl.value.toLowerCase().trim();
+        applyFilters();
+    });
+
+    document.querySelectorAll('[data-priority-filter]').forEach(function (el) {
+        el.addEventListener('click', function (e) {
+            e.preventDefault();
+            priorityFilter = el.dataset.priorityFilter;
+            document.getElementById('priorityFilterBtn').querySelector('.d-none').textContent =
+                priorityFilter ? el.textContent.trim() : 'Priority';
+            applyFilters();
+        });
+    });
+
+    document.querySelectorAll('[data-category-filter]').forEach(function (el) {
+        el.addEventListener('click', function (e) {
+            e.preventDefault();
+            categoryFilter = el.dataset.categoryFilter;
+            document.getElementById('categoryFilterBtn').querySelector('.d-none').textContent =
+                categoryFilter ? el.textContent.trim() : 'Category';
+            applyFilters();
+        });
+    });
+
+    applyFilters();
+}());
+</script>
+{% endblock extra_scripts %}

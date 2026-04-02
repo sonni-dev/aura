@@ -1,0 +1,619 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Aura | {{ goal.name }}{% endblock %}
+
+
+{% block content %}
+
+    <!-- Breadcrumb + Title ─────────────────────────────────────────────── -->
+    <div class="d-flex align-items-center mb-3">
+        <div>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard:hud' %}">DASHBOARD</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'goals:list' %}">GOALS</a></li>
+                <li class="breadcrumb-item active">{{ goal.name|upper }}</li>
+            </ol>
+            <h1 class="page-header mb-0">{{ goal.name }}</h1>
+        </div>
+    </div>
+
+    <!-- Action bar -->
+    <div class="mb-3 d-md-flex fw-bold gap-4">
+        <div class="mt-md-0 mt-2">
+            <a href="{% url 'admin:goals_goal_change' goal.pk %}"
+               class="text-decoration-none text-inverse">
+                <i class="bi bi-pen fa-fw me-1 text-inverse text-opacity-50"></i> Edit Goal
+            </a>
+        </div>
+        <div class="mt-md-0 mt-2">
+            <a href="#" class="text-decoration-none"
+               data-bs-toggle="modal" data-bs-target="#itemModal"
+               onclick="resetItemModal()">
+                <i class="bi bi-plus-circle fa-fw me-1 text-info text-opacity-75"></i>
+                <span class="text-info text-opacity-75">Add Item</span>
+            </a>
+        </div>
+        <div class="mt-md-0 mt-2 ms-md-auto">
+            <a href="{% url 'goals:list' %}" class="text-decoration-none text-inverse text-opacity-50">
+                <i class="bi bi-arrow-left fa-fw me-1"></i> Back to Goals
+            </a>
+        </div>
+    </div>
+
+
+    <!-- ═══════════════════ TWO-COLUMN LAYOUT ═══════════════════════════ -->
+    <div class="row gx-4">
+
+        <!-- ────────────────── LEFT COLUMN ──────────────────────────── -->
+        <div class="col-lg-8">
+
+            <!-- ════ Goal Items Card ══════════════════════════════════ -->
+            <div class="card mb-4">
+                <div class="card-header d-flex align-items-center bg-inverse bg-opacity-10 fw-400">
+                    <span>
+                        Items
+                        <span class="text-inverse text-opacity-50 fs-13px ms-1">
+                            ({{ active_items|length }} active{% if inactive_items %}, {{ inactive_items.count }} on back burner{% endif %})
+                        </span>
+                    </span>
+                    <a href="#" class="ms-auto text-decoration-none text-inverse text-opacity-50 fs-13px"
+                       data-bs-toggle="modal" data-bs-target="#itemModal"
+                       onclick="resetItemModal()">
+                        <i class="bi bi-plus-circle me-1"></i> Add Item
+                    </a>
+                </div>
+
+                <div class="card-body p-0">
+                    {% if active_items %}
+                    <table class="table table-hover m-0" id="itemsTable">
+                        <thead>
+                            <tr class="fs-12px text-inverse text-opacity-50">
+                                <th class="border-top-0 pt-3 pb-2 ps-4" style="width:42%;">Item</th>
+                                <th class="border-top-0 pt-3 pb-2">Type</th>
+                                <th class="border-top-0 pt-3 pb-2">Priority</th>
+                                <th class="border-top-0 pt-3 pb-2">Due</th>
+                                <th class="border-top-0 pt-3 pb-2 text-center">Done</th>
+                                <th class="border-top-0 pt-3 pb-2 pe-4"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in active_items %}
+                            <tr class="align-middle">
+
+                                <!-- Name + description -->
+                                <td class="align-middle ps-4">
+                                    <div class="fw-semibold text-inverse{% if item.is_complete %} text-opacity-35 text-decoration-line-through{% endif %}">
+                                        {{ item.name }}
+                                    </div>
+                                    {% if item.description %}
+                                    <div class="fs-12px text-inverse text-opacity-40 text-truncate" style="max-width:280px;">
+                                        {{ item.description }}
+                                    </div>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Type badge -->
+                                <td class="align-middle">
+                                    {% if item.item_type == 'milestone' %}
+                                    <span class="badge border border-info text-info px-2 pt-5px pb-5px rounded fs-11px d-inline-flex align-items-center">
+                                        <i class="bi bi-flag fs-9px me-1"></i> Milestone
+                                    </span>
+                                    {% elif item.item_type == 'blocking' %}
+                                    <span class="badge border border-danger text-danger px-2 pt-5px pb-5px rounded fs-11px d-inline-flex align-items-center">
+                                        <i class="bi bi-slash-circle fs-9px me-1"></i> Blocking
+                                    </span>
+                                    {% else %}
+                                    <span class="badge border border-secondary text-secondary px-2 pt-5px pb-5px rounded fs-11px d-inline-flex align-items-center">
+                                        <i class="bi bi-check2-square fs-9px me-1"></i> Task
+                                    </span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Priority -->
+                                <td class="align-middle">
+                                    {% if item.priority == 'high' %}
+                                    <span class="text-danger fs-12px"><i class="bi bi-chevron-double-up me-1"></i>High</span>
+                                    {% elif item.priority == 'medium' %}
+                                    <span class="text-warning fs-12px"><i class="bi bi-chevron-up me-1"></i>Med</span>
+                                    {% elif item.priority == 'low' %}
+                                    <span class="text-inverse text-opacity-40 fs-12px"><i class="bi bi-chevron-down me-1"></i>Low</span>
+                                    {% else %}
+                                    <span class="text-inverse text-opacity-25 fs-12px">—</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Due date -->
+                                <td class="align-middle">
+                                    {% if item.due_date %}
+                                        {% if item.is_overdue %}
+                                        <span class="text-danger fs-12px fw-600">
+                                            <i class="bi bi-exclamation-circle me-1"></i>{{ item.due_date|date:"M j" }}
+                                        </span>
+                                        {% elif item.due_date == today %}
+                                        <span class="text-warning fs-12px fw-600">
+                                            <i class="bi bi-calendar-check me-1"></i>Today
+                                        </span>
+                                        {% else %}
+                                        <span class="text-inverse text-opacity-50 fs-12px">{{ item.due_date|date:"M j" }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                    <span class="text-inverse text-opacity-25 fs-12px">—</span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Toggle complete -->
+                                <td class="align-middle text-center" id="table-icon-{{ item.pk }}">
+                                    <button type="button"
+                                            class="btn btn-link p-0 border-0 bg-transparent"
+                                            onclick="toggleItem({{ item.pk }}, '{% url 'goals:item_toggle' item.pk %}', this)"
+                                            title="{% if item.is_complete %}Mark incomplete{% else %}Mark complete{% endif %}">
+                                        {% if item.is_complete %}
+                                        <i class="bi bi-check-circle-fill text-theme fs-18px"></i>
+                                        {% else %}
+                                        <i class="bi bi-circle text-inverse text-opacity-20 fs-18px"></i>
+                                        {% endif %}
+                                    </button>
+                                </td>
+
+                                <!-- Edit / archive actions -->
+                                <td class="align-middle text-end pe-4">
+                                    <a href="#"
+                                       class="text-inverse text-opacity-40 me-3 fs-14px text-decoration-none"
+                                       title="Edit item"
+                                       data-bs-toggle="modal"
+                                       data-bs-target="#itemModal"
+                                       onclick="openEditModal({{ item.pk }}, '{{ item.name|escapejs }}', '{{ item.description|escapejs }}', '{{ item.item_type }}', '{{ item.priority }}', {{ item.order }}, '{% if item.due_date %}{{ item.due_date|date:'Y-m-d' }}{% endif %}'); return false;">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="#"
+                                       class="text-inverse text-opacity-40 fs-14px text-decoration-none"
+                                       title="Move to back burner"
+                                       onclick="toggleItemActive({{ item.pk }}, '{% url 'goals:item_toggle_active' item.pk %}'); return false;">
+                                        <i class="bi bi-archive"></i>
+                                    </a>
+                                </td>
+
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    {% else %}
+                    <div class="text-center py-5 text-inverse text-opacity-40">
+                        <i class="bi bi-list-check fs-28px d-block mb-2 text-info text-opacity-30"></i>
+                        No active items yet —
+                        <a href="#" class="text-info text-opacity-60 text-decoration-none"
+                           data-bs-toggle="modal" data-bs-target="#itemModal"
+                           onclick="resetItemModal()">add the first one</a>.
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Back-burner items (collapsed) -->
+                {% if inactive_items %}
+                <div class="card-footer border-top border-inverse border-opacity-10 p-0">
+                    <button class="btn btn-link w-100 text-start text-inverse text-opacity-40 fs-12px py-2 px-4 text-decoration-none"
+                            type="button" data-bs-toggle="collapse" data-bs-target="#backburnerItems">
+                        <i class="bi bi-archive me-1"></i>
+                        {{ inactive_items.count }} item{{ inactive_items.count|pluralize }} on the back burner
+                        <i class="bi bi-chevron-down ms-1 fs-10px"></i>
+                    </button>
+                    <div class="collapse" id="backburnerItems">
+                        <table class="table m-0">
+                            <tbody>
+                                {% for item in inactive_items %}
+                                <tr class="align-middle">
+                                    <td class="ps-4 py-2">
+                                        <span class="text-inverse text-opacity-25 text-decoration-line-through fs-13px">
+                                            {{ item.name }}
+                                        </span>
+                                    </td>
+                                    <td class="py-2 text-end pe-4">
+                                        <a href="#"
+                                           class="text-inverse text-opacity-25 fs-12px text-decoration-none"
+                                           title="Restore item"
+                                           onclick="toggleItemActive({{ item.pk }}, '{% url 'goals:item_toggle_active' item.pk %}'); return false;">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Restore
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+            <!-- END Goal Items Card -->
+
+        </div>
+        <!-- END left column -->
+
+
+        <!-- ────────────────── RIGHT COLUMN ─────────────────────────── -->
+        <div class="col-lg-4">
+
+            <!-- ════ Progress Card ════════════════════════════════════ -->
+            <div class="card mb-4">
+                <div class="card-header bg-inverse bg-opacity-10 fw-400 fs-13px">Progress</div>
+                <div class="card-body text-center py-4">
+
+                    <!-- Radial chart -->
+                    <div id="goalProgressChart" class="mx-auto mb-3" style="max-width:160px;"></div>
+
+                    <div class="fs-28px fw-bold text-info lh-1 mb-1">{{ pct }}%</div>
+                    <div class="fs-12px text-inverse text-opacity-50">
+                        {{ item_done }} of {{ item_total }} item{{ item_total|pluralize }} complete
+                    </div>
+
+                    {% if goal.is_complete %}
+                    <div class="mt-3">
+                        <span class="badge border border-theme text-theme px-3 py-2 fs-12px">
+                            <i class="bi bi-check-circle me-1"></i> Goal Complete!
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
+                </div>
+            </div>
+
+            <!-- ════ Goal Details Card ════════════════════════════════ -->
+            <div class="card mb-4">
+                <div class="card-header bg-inverse bg-opacity-10 fw-400 fs-13px">Details</div>
+                <div class="card-body py-3 px-4">
+                    <table class="table table-borderless table-sm m-0 fs-13px">
+                        <tbody>
+                            {% if goal.description %}
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 pb-3" colspan="2">
+                                    {{ goal.description }}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 fw-600 fs-11px text-uppercase" style="width:40%;">Category</td>
+                                <td class="text-inverse text-opacity-70 pe-0">
+                                    {% if goal.category %}{{ goal.get_category_display }}{% else %}—{% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 fw-600 fs-11px text-uppercase">Priority</td>
+                                <td class="pe-0">
+                                    {% if goal.priority == 'high' %}
+                                    <span class="text-danger fs-12px"><i class="bi bi-chevron-double-up me-1"></i>High</span>
+                                    {% elif goal.priority == 'medium' %}
+                                    <span class="text-warning fs-12px"><i class="bi bi-chevron-up me-1"></i>Medium</span>
+                                    {% else %}
+                                    <span class="text-inverse text-opacity-40 fs-12px"><i class="bi bi-chevron-down me-1"></i>Low</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 fw-600 fs-11px text-uppercase">Started</td>
+                                <td class="text-inverse text-opacity-70 pe-0">{{ goal.start_date|date:"M j, Y" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 fw-600 fs-11px text-uppercase">Due Date</td>
+                                <td class="pe-0">
+                                    {% if goal.due_date %}
+                                        {% if goal.is_overdue %}
+                                        <span class="text-danger fw-600 fs-12px">{{ goal.due_date|date:"M j, Y" }}</span>
+                                        {% else %}
+                                        <span class="text-inverse text-opacity-70 fs-12px">{{ goal.due_date|date:"M j, Y" }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                    <span class="text-inverse text-opacity-30">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 fw-600 fs-11px text-uppercase">Last Activity</td>
+                                <td class="pe-0">
+                                    {% if goal.last_progress %}
+                                        {% if goal.days_since_progress > 14 %}
+                                        <span class="text-warning fs-12px">
+                                            <i class="bi bi-hourglass-split me-1"></i>{{ goal.days_since_progress }}d ago
+                                        </span>
+                                        {% else %}
+                                        <span class="text-inverse text-opacity-70 fs-12px">{{ goal.last_progress|date:"M j, Y" }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                    <span class="text-inverse text-opacity-30">Not started</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-inverse text-opacity-40 ps-0 fw-600 fs-11px text-uppercase">Status</td>
+                                <td class="pe-0">
+                                    {% if goal.is_complete %}
+                                    <span class="text-theme fs-12px"><i class="bi bi-check-circle me-1"></i>Complete</span>
+                                    {% elif not goal.is_active %}
+                                    <span class="text-inverse text-opacity-30 fs-12px">Back Burner</span>
+                                    {% else %}
+                                    <span class="text-info fs-12px"><i class="bi bi-activity me-1"></i>Active</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
+                </div>
+            </div>
+
+        </div>
+        <!-- END right column -->
+
+    </div>
+    <!-- END two-column layout -->
+
+
+    <!-- ═══════════════════ ADD / EDIT ITEM MODAL ════════════════════ -->
+    <div class="modal fade" id="itemModal" tabindex="-1" aria-labelledby="itemModalLabel">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border border-inverse border-opacity-15"
+                 style="background:var(--bs-body-bg);">
+                <div class="modal-header border-bottom border-inverse border-opacity-10">
+                    <h5 class="modal-title text-inverse fs-14px text-uppercase fw-bold"
+                        id="itemModalLabel">Add Goal Item</h5>
+                    <button type="button" class="btn-close btn-close-white opacity-50"
+                            data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editItemId" value="">
+
+                    <!-- Name -->
+                    <div class="mb-3">
+                        <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                            Name <span class="text-info">*</span>
+                        </label>
+                        <input type="text" id="itemName" class="form-control"
+                               placeholder="e.g. Research competitors, Draft proposal…">
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                            Description
+                        </label>
+                        <textarea id="itemDescription" class="form-control" rows="2"
+                                  placeholder="Any notes or context…"></textarea>
+                    </div>
+
+                    <!-- Type / Priority / Due date -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-4">
+                            <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                                Type
+                            </label>
+                            <select id="itemType" class="form-select">
+                                {% for code, label in type_choices %}
+                                <option value="{{ code }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                                Priority
+                            </label>
+                            <select id="itemPriority" class="form-select">
+                                <option value="">— None —</option>
+                                {% for code, label in priority_choices %}
+                                <option value="{{ code }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                                Due Date
+                            </label>
+                            <input type="date" id="itemDueDate" class="form-control">
+                        </div>
+                    </div>
+
+                    <!-- Order -->
+                    <div class="mb-0">
+                        <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                            Display Order
+                        </label>
+                        <input type="number" id="itemOrder" class="form-control" value="0" min="0">
+                        <div class="form-text text-inverse text-opacity-35 fs-11px mt-1">
+                            Lower numbers appear first in the list.
+                        </div>
+                    </div>
+
+                    <div id="itemSaveError" class="alert alert-danger d-none py-2 fs-13px mt-3 mb-0"></div>
+                </div>
+                <div class="modal-footer border-top border-inverse border-opacity-10">
+                    <button type="button" class="btn btn-outline-default btn-sm"
+                            data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-outline-theme btn-sm"
+                            onclick="saveItem()">
+                        <i class="bi bi-check2 me-1"></i> Save Item
+                    </button>
+                </div>
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- END modal -->
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+var CSRF     = document.querySelector('meta[name="csrf-token"]').content;
+var SAVE_URL = "{% url 'goals:item_save' goal.pk %}";
+
+/* ── Progress radial chart ────────────────────────────────────────────── */
+(function () {
+    var pct        = {{ pct }};
+    var CYAN       = getComputedStyle(document.documentElement).getPropertyValue('--bs-info').trim() || '#0dcaf0';
+    var THEME      = getComputedStyle(document.documentElement).getPropertyValue('--bs-theme').trim() || '#7bff6a';
+    var chartColor = pct === 100 ? THEME : CYAN;
+
+    new ApexCharts(document.getElementById('goalProgressChart'), {
+        chart:     { type: 'radialBar', height: 160, sparkline: { enabled: true } },
+        series:    [pct],
+        colors:    [chartColor],
+        plotOptions: {
+            radialBar: {
+                hollow:    { size: '60%' },
+                dataLabels: { show: false },
+                track:     { background: 'rgba(255,255,255,0.06)', strokeWidth: '100%' },
+            },
+        },
+        stroke: { lineCap: 'round' },
+    }).render();
+}());
+
+
+/* ── Toggle item complete ─────────────────────────────────────────────── */
+function toggleItem(itemId, url, btn) {
+    fetch(url, {
+        method:  'POST',
+        headers: { 'X-CSRFToken': CSRF },
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        var icon = btn.querySelector('i');
+        var row  = btn.closest('tr');
+        var nameEl = row.querySelector('.fw-semibold');
+
+        if (data.done) {
+            icon.className = 'bi bi-check-circle-fill text-theme fs-18px';
+            if (nameEl) {
+                nameEl.classList.add('text-opacity-35', 'text-decoration-line-through');
+                nameEl.classList.remove('text-inverse');
+            }
+        } else {
+            icon.className = 'bi bi-circle text-inverse text-opacity-20 fs-18px';
+            if (nameEl) {
+                nameEl.classList.remove('text-opacity-35', 'text-decoration-line-through');
+                nameEl.classList.add('text-inverse');
+            }
+        }
+
+        // Update progress ring and counters without a full reload
+        updateProgress(data.pct, data.item_done, data.item_total);
+    })
+    .catch(function (err) { console.error('Toggle failed:', err); });
+}
+
+/* ── Update progress UI after a toggle ───────────────────────────────── */
+function updateProgress(pct, done, total) {
+    // Fraction text under the chart
+    var pctEl   = document.querySelector('#goalProgressChart + .fs-28px');
+    var countEl = document.querySelector('#goalProgressChart ~ .fs-12px');
+    if (pctEl)   pctEl.textContent   = pct + '%';
+    if (countEl) countEl.textContent = done + ' of ' + total + ' item' + (total === 1 ? '' : 's') + ' complete';
+    // Full reload to redraw chart cleanly — lightweight enough here
+    if (pct !== parseInt(document.querySelector('#goalProgressChart + .fs-28px')?.textContent || pct)) {
+        window.location.reload();
+    }
+}
+
+
+/* ── Toggle item active (back burner) ─────────────────────────────────── */
+function toggleItemActive(itemId, url) {
+    fetch(url, {
+        method:  'POST',
+        headers: { 'X-CSRFToken': CSRF },
+    })
+    .then(function (r) { return r.json(); })
+    .then(function () { window.location.reload(); })
+    .catch(function (err) { console.error('Toggle active failed:', err); });
+}
+
+
+/* ── Modal helpers ────────────────────────────────────────────────────── */
+function resetItemModal() {
+    document.getElementById('itemModalLabel').textContent  = 'Add Goal Item';
+    document.getElementById('editItemId').value            = '';
+    document.getElementById('itemName').value              = '';
+    document.getElementById('itemDescription').value       = '';
+    document.getElementById('itemType').value              = 'task';
+    document.getElementById('itemPriority').value          = '';
+    document.getElementById('itemOrder').value             = '0';
+    document.getElementById('itemDueDate').value           = '';
+    document.getElementById('itemSaveError').classList.add('d-none');
+}
+
+function openEditModal(id, name, description, type, priority, order, dueDate) {
+    document.getElementById('itemModalLabel').textContent  = 'Edit Goal Item';
+    document.getElementById('editItemId').value            = id;
+    document.getElementById('itemName').value              = name;
+    document.getElementById('itemDescription').value       = description;
+    document.getElementById('itemType').value              = type;
+    document.getElementById('itemPriority').value          = priority;
+    document.getElementById('itemOrder').value             = order;
+    document.getElementById('itemDueDate').value           = dueDate;
+    document.getElementById('itemSaveError').classList.add('d-none');
+}
+
+function saveItem() {
+    var errEl = document.getElementById('itemSaveError');
+    errEl.classList.add('d-none');
+
+    var name = document.getElementById('itemName').value.trim();
+    if (!name) {
+        errEl.textContent = 'Name is required.';
+        errEl.classList.remove('d-none');
+        return;
+    }
+
+    var payload = {
+        item_id:     document.getElementById('editItemId').value || null,
+        name:        name,
+        description: document.getElementById('itemDescription').value.trim(),
+        item_type:   document.getElementById('itemType').value,
+        priority:    document.getElementById('itemPriority').value,
+        order:       parseInt(document.getElementById('itemOrder').value) || 0,
+        due_date:    document.getElementById('itemDueDate').value,
+    };
+
+    fetch(SAVE_URL, {
+        method:  'POST',
+        headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.error) {
+            errEl.textContent = data.error;
+            errEl.classList.remove('d-none');
+            return;
+        }
+        window.location.reload();
+    })
+    .catch(function () {
+        errEl.textContent = 'Something went wrong. Please try again.';
+        errEl.classList.remove('d-none');
+    });
+}
+
+/* Reset modal on fresh open */
+document.getElementById('itemModal').addEventListener('show.bs.modal', function () {
+    if (!document.getElementById('editItemId').value) {
+        resetItemModal();
+    }
+});
+</script>
+{% endblock extra_scripts %}
