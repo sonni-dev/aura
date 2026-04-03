@@ -135,7 +135,7 @@
                     <tbody>
 
                         {% for r in reminders %}
-                        {% with is_due=r.is_due is_recurring=r.frequency != 'once' %}
+                        {% with is_due=r.is_due is_recurring=r.frequency %}
                         <tr class="reminder-row align-middle"
                             data-active="true"
                             data-due="{% if is_due %}true{% else %}false{% endif %}"
