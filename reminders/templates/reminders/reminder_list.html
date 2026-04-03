@@ -1,0 +1,822 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Aura | Reminders{% endblock %}
+
+
+{% block content %}
+
+    <!-- Breadcrumb + Title ─────────────────────────────────────────────── -->
+    <div class="d-flex align-items-center mb-3">
+        <div>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard:hud' %}">DASHBOARD</a></li>
+                <li class="breadcrumb-item active">REMINDERS</li>
+            </ol>
+            <h1 class="page-header mb-0">Reminders</h1>
+        </div>
+        <div class="ms-auto">
+            <a href="#" class="btn btn-outline-warning btn-sm"
+               data-bs-toggle="modal" data-bs-target="#reminderModal"
+               onclick="resetReminderModal()">
+                <i class="bi bi-plus-lg me-1"></i> Add Reminder
+            </a>
+        </div>
+    </div>
+
+
+    <!-- ═══════════════════ STAT PILLS ══════════════════════════════════ -->
+    <div class="row g-3 mb-4">
+
+        <div class="col-6 col-md col-xl">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold text-warning lh-1 mb-1">{{ total_active }}</div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Active</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md col-xl">
+            <div class="card text-center py-3 px-2 h-100{% if due_now_count %} border border-danger border-opacity-50{% endif %}">
+                <div class="fs-24px fw-bold lh-1 mb-1 {% if due_now_count %}text-danger{% else %}text-inverse text-opacity-25{% endif %}">
+                    {{ due_now_count }}
+                </div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Due Now</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md col-xl">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold {% if upcoming_count %}text-warning{% else %}text-inverse text-opacity-25{% endif %} lh-1 mb-1">
+                    {{ upcoming_count }}
+                </div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Next 24h</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md col-xl">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold text-inverse text-opacity-40 lh-1 mb-1">{{ one_time_count }}</div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">One-time</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md col-xl">
+            <div class="card text-center py-3 px-2 h-100">
+                <div class="fs-24px fw-bold text-warning lh-1 mb-1">{{ recurring_count }}</div>
+                <div class="fs-11px text-inverse text-opacity-50 text-uppercase fw-600">Recurring</div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ═══════════════════ MAIN CARD ═══════════════════════════════════ -->
+    <div class="card">
+
+        <!-- Filter tabs -->
+        <ul class="nav nav-tabs nav-tabs-v2 px-4">
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link active px-2" data-filter="all">
+                    All
+                    <span class="badge bg-warning bg-opacity-20 text-warning ms-1 fs-10px px-2">{{ total_active }}</span>
+                </a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="due">
+                    Due Now
+                    {% if due_now_count %}<span class="badge bg-danger bg-opacity-20 text-danger ms-1 fs-10px px-2">{{ due_now_count }}</span>{% endif %}
+                </a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="upcoming">
+                    Upcoming
+                    {% if upcoming_count %}<span class="badge bg-warning bg-opacity-20 text-warning ms-1 fs-10px px-2">{{ upcoming_count }}</span>{% endif %}
+                </a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="recurring">Recurring</a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="once">One-time</a>
+            </li>
+            <li class="nav-item me-3">
+                <a href="#" class="nav-link px-2" data-filter="inactive">Inactive</a>
+            </li>
+        </ul>
+
+        <div class="p-4">
+
+            <!-- Search -->
+            <div class="input-group mb-4">
+                <div class="flex-fill position-relative">
+                    <input type="text" id="reminderSearch" class="form-control px-35px"
+                           placeholder="Search reminders...">
+                    <div class="input-group-text position-absolute top-0 bottom-0 bg-none border-0 start-0"
+                         style="z-index:1020;">
+                        <i class="fa fa-search opacity-5"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-responsive">
+                <table class="table table-hover text-nowrap" id="reminderTable">
+                    <thead>
+                        <tr>
+                            <th class="border-top-0 pt-0 pb-2" style="width:28%;">Reminder</th>
+                            <th class="border-top-0 pt-0 pb-2">Linked To</th>
+                            <th class="border-top-0 pt-0 pb-2">Schedule</th>
+                            <th class="border-top-0 pt-0 pb-2">Channel</th>
+                            <th class="border-top-0 pt-0 pb-2">Next Run</th>
+                            <th class="border-top-0 pt-0 pb-2">Last Run</th>
+                            <th class="border-top-0 pt-0 pb-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        {% for r in reminders %}
+                        {% with is_due=r.is_due is_recurring=r.frequency != 'once' %}
+                        <tr class="reminder-row align-middle"
+                            data-active="true"
+                            data-due="{% if is_due %}true{% else %}false{% endif %}"
+                            data-freq="{{ r.frequency }}"
+                            data-name="{{ r.title|lower }}"
+                            data-upcoming="{% if r.next_run and not is_due %}true{% else %}false{% endif %}"
+                            id="reminder-row-{{ r.pk }}">
+
+                            <!-- Title + description -->
+                            <td class="align-middle">
+                                <div class="fw-semibold text-inverse">{{ r.title }}</div>
+                                {% if r.description %}
+                                <div class="fs-12px text-inverse text-opacity-40 text-truncate"
+                                     style="max-width:260px;">{{ r.description }}</div>
+                                {% endif %}
+                            </td>
+
+                            <!-- Linked source — all 6 types ─────────── -->
+                            <td class="align-middle">
+                                {% if r.task %}
+                                    <span class="badge border border-theme text-theme px-2 pt-5px pb-5px rounded fs-11px d-inline-flex align-items-center">
+                                        <i class="bi bi-check2-square fs-9px me-1"></i> Task
+                                    </span>
+                                    <div class="fs-11px text-inverse text-opacity-50 mt-1 text-truncate" style="max-width:150px;">{{ r.task.name }}</div>
+                                {% elif r.goal_item %}
+                                    <span class="badge border border-purple text-purple px-2 pt-5px pb-5px rounded fs-11px d-inline-flex align-items-center" style="border-color:#a855f7 !important; color:#a855f7 !important;">
+                                        <i class="bi bi-bullseye fs-9px me-1"></i> Goal Item
+                                    </span>
+                                    <div class="fs-11px text-inverse text-opacity-50 mt-1 text-truncate" style="max-width:150px;">{{ r.goal_item.name }}</div>
+                                {% elif r.goal %}
+                                    <span class="badge border border-info text-info px-2 pt-5px pb-5px rounded fs-11px d-inline-flex align-items-center">
+                                        <i class="bi bi-bullseye fs-9px me-1"></i> Goal
+                                    </span>
+                                    <div class="fs-11px text-inverse text-opacity-50 mt-1 text-truncate" style="max-width:150px;">{{ r.goal.name }}</div>
+                                {% elif r.routine_item %}
+                                    <span class="badge border border-warning text-warning px-2 pt-5px pb-5px rounded fs-11px d-inline-flex align-items-center">
+                                        <i class="bi bi-arrow-repeat fs-9px me-1"></i> Routine Item
+                                    </span>
+                                    <div class="fs-11px text-inverse text-opacity-50 mt-1 text-truncate" style="max-width:150px;">{{ r.routine_item.title }}</div>
+                                {% elif r.routine %}
+                                    <span class="badge border border-warning text-warning px-2 pt-5px pb-5px rounded fs-11px d-inline-flex align-items-center">
+                                        <i class="bi bi-arrow-repeat fs-9px me-1"></i> Routine
+                                    </span>
+                                    <div class="fs-11px text-inverse text-opacity-50 mt-1 text-truncate" style="max-width:150px;">{{ r.routine.name }}</div>
+                                {% elif r.habit %}
+                                    <span class="badge border border-pink text-pink px-2 pt-5px pb-5px rounded fs-11px d-inline-flex align-items-center">
+                                        <i class="bi bi-graph-up fs-9px me-1"></i> Habit
+                                    </span>
+                                    <div class="fs-11px text-inverse text-opacity-50 mt-1 text-truncate" style="max-width:150px;">{{ r.habit.name }}</div>
+                                {% else %}
+                                    <span class="text-inverse text-opacity-30 fs-12px">Standalone</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Schedule badge -->
+                            <td class="align-middle">
+                                {% if r.frequency == 'once' %}
+                                <span class="badge border border-secondary text-secondary px-2 pt-5px pb-5px rounded fs-11px">
+                                    One-time
+                                </span>
+                                {% else %}
+                                <span class="badge border border-warning text-warning px-2 pt-5px pb-5px rounded fs-11px">
+                                    <i class="bi bi-arrow-repeat me-1 fs-9px"></i>
+                                    {% if r.interval > 1 %}Every {{ r.interval }} {% endif %}{{ r.get_frequency_display }}
+                                </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Channel -->
+                            <td class="align-middle">
+                                {% if r.channel == 'in_app' %}
+                                <span class="text-inverse text-opacity-50 fs-12px"><i class="bi bi-display me-1"></i>In-App</span>
+                                {% elif r.channel == 'sms' %}
+                                <span class="text-theme fs-12px"><i class="bi bi-phone me-1"></i>SMS</span>
+                                {% else %}
+                                <span class="text-info fs-12px"><i class="bi bi-bell me-1"></i>Push</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Next run -->
+                            <td class="align-middle">
+                                {% if r.next_run %}
+                                    {% if is_due %}
+                                    <span class="text-danger fw-600 fs-12px">
+                                        <i class="bi bi-exclamation-circle me-1"></i>{{ r.next_run|date:"M j, g:i A" }}
+                                    </span>
+                                    {% elif r.is_urgent %}
+                                    <span class="text-warning fw-600 fs-12px">
+                                        <i class="bi bi-clock me-1"></i>{{ r.next_run|date:"M j, g:i A" }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-inverse text-opacity-60 fs-12px">
+                                        {{ r.next_run|date:"M j, Y" }}
+                                        <span class="text-inverse text-opacity-35">{{ r.next_run|date:"g:i A" }}</span>
+                                    </span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="text-inverse text-opacity-25 fs-12px">—</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Last run -->
+                            <td class="align-middle">
+                                {% if r.last_run %}
+                                <span class="text-inverse text-opacity-40 fs-12px">{{ r.last_run|date:"M j, Y" }}</span>
+                                {% else %}
+                                <span class="text-inverse text-opacity-25 fs-12px">Never</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Actions -->
+                            <td class="align-middle text-end pe-1">
+                                <div class="d-flex align-items-center justify-content-end gap-3">
+
+                                    {% if is_due %}
+                                    <!-- Snooze dropdown (only when due) -->
+                                    <div class="dropdown">
+                                        <button class="btn btn-link p-0 border-0 bg-transparent text-warning text-opacity-60"
+                                                data-bs-toggle="dropdown" title="Snooze">
+                                            <i class="bi bi-alarm fs-15px"></i>
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-end">
+                                            <div class="dropdown-header fs-11px text-inverse text-opacity-40 text-uppercase">
+                                                Snooze for…
+                                            </div>
+                                            <a class="dropdown-item fs-13px" href="#"
+                                               onclick="snoozeReminder({{ r.pk }}, 1); return false;">1 hour</a>
+                                            <a class="dropdown-item fs-13px" href="#"
+                                               onclick="snoozeReminder({{ r.pk }}, 4); return false;">4 hours</a>
+                                            <a class="dropdown-item fs-13px" href="#"
+                                               onclick="snoozeReminder({{ r.pk }}, 24); return false;">Tomorrow</a>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    {% if is_recurring %}
+                                    <!--
+                                        Advance — for recurring reminders.
+                                        Pushes next_run to the next scheduled cycle WITHOUT
+                                        marking complete and WITHOUT propagating to source.
+                                        Use this to "acknowledge and move on" for whole-goal /
+                                        whole-routine / habit reminders that recur on a schedule.
+                                    -->
+                                    <button type="button"
+                                            class="btn btn-link p-0 border-0 bg-transparent text-warning text-opacity-60"
+                                            onclick="advanceReminder({{ r.pk }})"
+                                            title="Skip to next scheduled run">
+                                        <i class="bi bi-skip-forward-circle fs-17px"></i>
+                                    </button>
+                                    {% endif %}
+
+                                    <!--
+                                        Dismiss — marks complete + deactivates.
+                                        Also propagates completion to Task / GoalItem / RoutineItem
+                                        when those FKs are set. Does NOT auto-complete whole
+                                        Goal / Routine / Habit (too coarse).
+                                    -->
+                                    <button type="button"
+                                            class="btn btn-link p-0 border-0 bg-transparent
+                                                   {% if is_due %}text-theme{% else %}text-inverse text-opacity-35{% endif %}"
+                                            onclick="dismissReminder({{ r.pk }})"
+                                            title="Dismiss{% if r.task or r.goal_item or r.routine_item %} (will also complete linked {{ r.source_label }}){% endif %}">
+                                        <i class="bi bi-check-circle fs-17px"></i>
+                                    </button>
+
+                                    <!-- Edit -->
+                                    <button type="button"
+                                            class="btn btn-link p-0 border-0 bg-transparent text-inverse text-opacity-35"
+                                            data-bs-toggle="modal" data-bs-target="#reminderModal"
+                                            onclick="openEditModal(
+                                                {{ r.pk }},
+                                                '{{ r.title|escapejs }}',
+                                                '{{ r.description|escapejs }}',
+                                                '{{ r.frequency }}',
+                                                {{ r.interval }},
+                                                '{{ r.channel }}',
+                                                '{% if r.next_run %}{{ r.next_run|date:"Y-m-d" }}T{{ r.next_run|date:"H:i" }}{% endif %}',
+                                                '{% if r.task %}task{% elif r.goal_item %}goal_item{% elif r.goal %}goal{% elif r.routine_item %}routine_item{% elif r.routine %}routine{% elif r.habit %}habit{% endif %}',
+                                                '{% if r.task %}{{ r.task.pk }}{% elif r.goal_item %}{{ r.goal_item.pk }}{% elif r.goal %}{{ r.goal.pk }}{% elif r.routine_item %}{{ r.routine_item.pk }}{% elif r.routine %}{{ r.routine.pk }}{% elif r.habit %}{{ r.habit.pk }}{% endif %}'
+                                            )"
+                                            title="Edit">
+                                        <i class="bi bi-pencil fs-13px"></i>
+                                    </button>
+
+                                </div>
+                            </td>
+
+                        </tr>
+                        {% endwith %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-inverse text-opacity-40 py-5">
+                                <i class="bi bi-bell fs-28px d-block mb-2 text-warning text-opacity-30"></i>
+                                No active reminders — add one above.
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                        <!-- Inactive rows -->
+                        {% for r in inactive %}
+                        <tr class="reminder-row align-middle"
+                            data-active="false"
+                            data-due="false"
+                            data-freq="{{ r.frequency }}"
+                            data-upcoming="false"
+                            data-name="{{ r.title|lower }}">
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-bell-slash text-inverse text-opacity-20 flex-shrink-0"></i>
+                                    <div>
+                                        <span class="text-inverse text-opacity-25 text-decoration-line-through">{{ r.title }}</span>
+                                        {% if r.is_complete %}
+                                        <span class="badge bg-inverse bg-opacity-10 text-inverse text-opacity-30 ms-1 fs-10px">Dismissed</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="align-middle">
+                                {% if r.source_label %}
+                                <span class="text-inverse text-opacity-25 fs-12px">{{ r.source_label }}</span>
+                                {% endif %}
+                            </td>
+                            <td colspan="3"></td>
+                            <td></td>
+                            <td class="align-middle text-end pe-1">
+                                <a href="{% url 'admin:reminders_reminder_change' r.pk %}"
+                                   class="text-inverse text-opacity-20 text-decoration-none"
+                                   title="Edit in admin">
+                                    <i class="bi bi-pencil fs-13px"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- ═══════════════════ ADD / EDIT REMINDER MODAL ════════════════════ -->
+    <div class="modal fade" id="reminderModal" tabindex="-1" aria-labelledby="reminderModalLabel">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border border-inverse border-opacity-15"
+                 style="background:var(--bs-body-bg);">
+
+                <div class="modal-header border-bottom border-inverse border-opacity-10">
+                    <h5 class="modal-title text-inverse fs-14px text-uppercase fw-bold"
+                        id="reminderModalLabel">Add Reminder</h5>
+                    <button type="button" class="btn-close btn-close-white opacity-50"
+                            data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" id="editReminderId" value="">
+
+                    <!-- Title -->
+                    <div class="mb-3">
+                        <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                            Title <span class="text-warning">*</span>
+                        </label>
+                        <input type="text" id="reminderTitle" class="form-control"
+                               placeholder="e.g. Weekly goal check-in, Take medication…">
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="mb-3">
+                        <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">Notes</label>
+                        <textarea id="reminderDescription" class="form-control" rows="2"
+                                  placeholder="Any extra context…"></textarea>
+                    </div>
+
+                    <!-- Frequency / Interval / Channel -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-4">
+                            <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                                Frequency
+                            </label>
+                            <select id="reminderFrequency" class="form-select" onchange="onFreqChange()">
+                                {% for code, label in freq_choices %}
+                                <option value="{{ code }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-4" id="intervalRow">
+                            <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                                Every N <span id="intervalUnit" class="text-inverse text-opacity-40">units</span>
+                            </label>
+                            <input type="number" id="reminderInterval" class="form-control" value="1" min="1">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                                Channel
+                            </label>
+                            <select id="reminderChannel" class="form-select">
+                                {% for code, label in channel_choices %}
+                                <option value="{{ code }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Next run datetime -->
+                    <div class="mb-3">
+                        <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                            Next Run
+                        </label>
+                        <input type="datetime-local" id="reminderNextRun" class="form-control">
+                        <div class="form-text text-inverse text-opacity-35 fs-11px mt-1">
+                            When should this reminder fire?
+                        </div>
+                    </div>
+
+                    <!-- Link to source — all 6 types -->
+                    <div class="row g-3 mb-0">
+                        <div class="col-sm-4">
+                            <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold">
+                                Link To <span class="text-inverse text-opacity-30">(optional)</span>
+                            </label>
+                            <select id="sourceType" class="form-select" onchange="onSourceTypeChange()">
+                                <option value="">— Standalone —</option>
+                                <option value="task">Task</option>
+                                <option value="goal_item">Goal Item</option>
+                                <option value="goal">Goal</option>
+                                <option value="routine_item">Routine Item</option>
+                                <option value="routine">Routine</option>
+                                <option value="habit">Habit</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-8" id="sourcePickerRow" style="display:none;">
+                            <label class="form-label text-inverse text-opacity-65 fs-12px text-uppercase fw-bold"
+                                   id="sourcePickerLabel">Select</label>
+
+                            <select id="sourceTask" class="form-select source-picker d-none">
+                                <option value="">— Select task —</option>
+                                {% for t in tasks %}
+                                <option value="{{ t.pk }}">{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+
+                            <select id="sourceGoalItem" class="form-select source-picker d-none">
+                                <option value="">— Select goal item —</option>
+                                {% for gi in goal_items %}
+                                <option value="{{ gi.pk }}">{{ gi.goal.name }} › {{ gi.name }}</option>
+                                {% endfor %}
+                            </select>
+
+                            <select id="sourceGoal" class="form-select source-picker d-none">
+                                <option value="">— Select goal —</option>
+                                {% for g in goals %}
+                                <option value="{{ g.pk }}">{{ g.name }}</option>
+                                {% endfor %}
+                            </select>
+
+                            <select id="sourceRoutineItem" class="form-select source-picker d-none">
+                                <option value="">— Select routine item —</option>
+                                {% for ri in routine_items %}
+                                <option value="{{ ri.pk }}">{{ ri.routine.name }} › {{ ri.title }}</option>
+                                {% endfor %}
+                            </select>
+
+                            <select id="sourceRoutine" class="form-select source-picker d-none">
+                                <option value="">— Select routine —</option>
+                                {% for ro in routines %}
+                                <option value="{{ ro.pk }}">{{ ro.name }}</option>
+                                {% endfor %}
+                            </select>
+
+                            <select id="sourceHabit" class="form-select source-picker d-none">
+                                <option value="">— Select habit —</option>
+                                {% for h in habits %}
+                                <option value="{{ h.pk }}">{{ h.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Source propagation hint -->
+                    <div id="sourcePropagationHint" class="mt-2 fs-12px text-inverse text-opacity-40 d-none">
+                        <i class="bi bi-info-circle me-1"></i>
+                        <span id="sourcePropagationText"></span>
+                    </div>
+
+                    <div id="reminderSaveError" class="alert alert-danger d-none py-2 fs-13px mt-3 mb-0"></div>
+                </div>
+
+                <div class="modal-footer border-top border-inverse border-opacity-10">
+                    <button type="button" class="btn btn-outline-default btn-sm"
+                            data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-outline-warning btn-sm"
+                            onclick="saveReminder()">
+                        <i class="bi bi-check2 me-1"></i> Save Reminder
+                    </button>
+                </div>
+
+                <div class="card-arrow">
+                    <div class="card-arrow-top-left"></div>
+                    <div class="card-arrow-top-right"></div>
+                    <div class="card-arrow-bottom-left"></div>
+                    <div class="card-arrow-bottom-right"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+(function () {
+    'use strict';
+
+    var CSRF = document.querySelector('meta[name="csrf-token"]').content;
+    window._CSRF = CSRF;
+
+    // ── Filter / search ───────────────────────────────────────────────────
+    var rows         = document.querySelectorAll('.reminder-row');
+    var searchEl     = document.getElementById('reminderSearch');
+    var tabs         = document.querySelectorAll('[data-filter]');
+    var activeFilter = 'all';
+    var searchTerm   = '';
+
+    function rowMatchesTab(row) {
+        if (activeFilter === 'inactive')  return row.dataset.active === 'false';
+        if (row.dataset.active === 'false') return false;
+        switch (activeFilter) {
+            case 'all':       return true;
+            case 'due':       return row.dataset.due      === 'true';
+            case 'upcoming':  return row.dataset.upcoming === 'true';
+            case 'recurring': return row.dataset.freq     !== 'once';
+            case 'once':      return row.dataset.freq     === 'once';
+            default:          return true;
+        }
+    }
+
+    function applyFilters() {
+        rows.forEach(function (row) {
+            var tabOk    = rowMatchesTab(row);
+            var searchOk = !searchTerm || (row.dataset.name || '').includes(searchTerm);
+            row.classList.toggle('d-none', !(tabOk && searchOk));
+        });
+    }
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function (e) {
+            e.preventDefault();
+            tabs.forEach(function (t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            activeFilter = tab.dataset.filter;
+            applyFilters();
+        });
+    });
+
+    searchEl.addEventListener('input', function () {
+        searchTerm = searchEl.value.toLowerCase().trim();
+        applyFilters();
+    });
+
+    applyFilters();
+
+}());
+
+
+/* ── Dismiss (marks complete + deactivates + propagates to source) ────── */
+function dismissReminder(pk) {
+    var row = document.getElementById('reminder-row-' + pk);
+    fetch('/reminders/' + pk + '/dismiss/', {
+        method:  'POST',
+        headers: { 'X-CSRFToken': window._CSRF },
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.dismissed) {
+            row.style.transition = 'opacity 0.3s';
+            row.style.opacity    = '0';
+            setTimeout(function () { row.remove(); }, 320);
+        }
+    })
+    .catch(function (err) { console.error('Dismiss failed:', err); });
+}
+
+
+/* ── Advance (skip to next scheduled cycle, no source propagation) ─────── */
+function advanceReminder(pk) {
+    fetch('/reminders/' + pk + '/advance/', {
+        method:  'POST',
+        headers: { 'X-CSRFToken': window._CSRF },
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.error) { console.error(data.error); return; }
+        // Reload to show the updated next_run time
+        window.location.reload();
+    })
+    .catch(function (err) { console.error('Advance failed:', err); });
+}
+
+
+/* ── Snooze (push next_run forward by N hours) ───────────────────────── */
+function snoozeReminder(pk, hours) {
+    fetch('/reminders/' + pk + '/snooze/', {
+        method:  'POST',
+        headers: { 'X-CSRFToken': window._CSRF, 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ hours: hours }),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function () { window.location.reload(); })
+    .catch(function (err) { console.error('Snooze failed:', err); });
+}
+
+
+/* ── Modal: frequency change ─────────────────────────────────────────── */
+function onFreqChange() {
+    var freq   = document.getElementById('reminderFrequency').value;
+    var row    = document.getElementById('intervalRow');
+    var unit   = document.getElementById('intervalUnit');
+    var units  = { daily: 'days', weekly: 'weeks', monthly: 'months', custom: 'units' };
+    row.style.display   = (freq === 'once') ? 'none' : '';
+    unit.textContent    = units[freq] || 'units';
+}
+
+/* ── Modal: source type change ───────────────────────────────────────── */
+var SOURCE_HINTS = {
+    'task':         '✓ Dismissing will also mark this Task complete.',
+    'goal_item':    '✓ Dismissing will also mark this Goal Item complete.',
+    'routine_item': '✓ Dismissing will also toggle this Routine Item done for today.',
+    'goal':         'ℹ Goal-level reminders do not auto-complete the Goal (use the Goals page).',
+    'routine':      'ℹ Routine-level reminders do not auto-complete the Routine.',
+    'habit':        'ℹ Habit reminders do not auto-log the Habit.',
+};
+
+/* Maps source type key → the element id of its <select> picker */
+var SOURCE_PICKER_IDS = {
+    'task':         'sourceTask',
+    'goal_item':    'sourceGoalItem',
+    'goal':         'sourceGoal',
+    'routine_item': 'sourceRoutineItem',
+    'routine':      'sourceRoutine',
+    'habit':        'sourceHabit',
+};
+
+function onSourceTypeChange() {
+    var type      = document.getElementById('sourceType').value;
+    var pickerRow = document.getElementById('sourcePickerRow');
+    var label     = document.getElementById('sourcePickerLabel');
+    var hint      = document.getElementById('sourcePropagationHint');
+    var hintText  = document.getElementById('sourcePropagationText');
+    var pickers   = document.querySelectorAll('.source-picker');
+
+    pickers.forEach(function (el) { el.classList.add('d-none'); });
+
+    if (!type) {
+        pickerRow.style.display = 'none';
+        hint.classList.add('d-none');
+        return;
+    }
+
+    pickerRow.style.display = '';
+    label.textContent       = type.replace('_', ' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+
+    var pickerId = SOURCE_PICKER_IDS[type];
+    if (pickerId) {
+        var sel = document.getElementById(pickerId);
+        if (sel) sel.classList.remove('d-none');
+    }
+
+    if (SOURCE_HINTS[type]) {
+        hintText.textContent = SOURCE_HINTS[type];
+        hint.classList.remove('d-none');
+    } else {
+        hint.classList.add('d-none');
+    }
+}
+
+/* ── Modal: reset ────────────────────────────────────────────────────── */
+function resetReminderModal() {
+    document.getElementById('reminderModalLabel').textContent  = 'Add Reminder';
+    document.getElementById('editReminderId').value            = '';
+    document.getElementById('reminderTitle').value             = '';
+    document.getElementById('reminderDescription').value       = '';
+    document.getElementById('reminderFrequency').value         = 'once';
+    document.getElementById('reminderInterval').value          = '1';
+    document.getElementById('reminderChannel').value           = 'in_app';
+    document.getElementById('reminderNextRun').value           = '';
+    document.getElementById('sourceType').value                = '';
+    document.getElementById('reminderSaveError').classList.add('d-none');
+    onFreqChange();
+    onSourceTypeChange();
+}
+
+/* ── Modal: pre-fill for edit ────────────────────────────────────────── */
+function openEditModal(id, title, description, frequency, interval, channel, nextRun, sourceType, sourceId) {
+    document.getElementById('reminderModalLabel').textContent  = 'Edit Reminder';
+    document.getElementById('editReminderId').value            = id;
+    document.getElementById('reminderTitle').value             = title;
+    document.getElementById('reminderDescription').value       = description;
+    document.getElementById('reminderFrequency').value         = frequency;
+    document.getElementById('reminderInterval').value          = interval;
+    document.getElementById('reminderChannel').value           = channel;
+    document.getElementById('reminderNextRun').value           = nextRun;
+    document.getElementById('reminderSaveError').classList.add('d-none');
+    onFreqChange();
+
+    document.getElementById('sourceType').value = sourceType || '';
+    onSourceTypeChange();
+
+    if (sourceType && sourceId) {
+        var pickerId = SOURCE_PICKER_IDS[sourceType];
+        if (pickerId) {
+            var sel = document.getElementById(pickerId);
+            if (sel) sel.value = sourceId;
+        }
+    }
+}
+
+/* ── Modal: save ─────────────────────────────────────────────────────── */
+function saveReminder() {
+    var errEl = document.getElementById('reminderSaveError');
+    errEl.classList.add('d-none');
+
+    var title = document.getElementById('reminderTitle').value.trim();
+    if (!title) {
+        errEl.textContent = 'Title is required.';
+        errEl.classList.remove('d-none');
+        return;
+    }
+
+    var sourceType = document.getElementById('sourceType').value;
+    var sourceId   = null;
+    if (sourceType) {
+        var pickerId = SOURCE_PICKER_IDS[sourceType];
+        if (pickerId) {
+            var sel = document.getElementById(pickerId);
+            sourceId = sel ? sel.value : null;
+        }
+    }
+
+    var payload = {
+        reminder_id:  document.getElementById('editReminderId').value || null,
+        title:        title,
+        description:  document.getElementById('reminderDescription').value.trim(),
+        frequency:    document.getElementById('reminderFrequency').value,
+        interval:     parseInt(document.getElementById('reminderInterval').value) || 1,
+        channel:      document.getElementById('reminderChannel').value,
+        next_run:     document.getElementById('reminderNextRun').value,
+        source_type:  sourceType || '',
+        source_id:    sourceId   || null,
+    };
+
+    fetch("{% url 'reminders:save' %}", {
+        method:  'POST',
+        headers: { 'X-CSRFToken': window._CSRF, 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.error) {
+            errEl.textContent = data.error;
+            errEl.classList.remove('d-none');
+            return;
+        }
+        window.location.reload();
+    })
+    .catch(function () {
+        errEl.textContent = 'Something went wrong. Please try again.';
+        errEl.classList.remove('d-none');
+    });
+}
+
+/* Reset modal on fresh open */
+document.getElementById('reminderModal').addEventListener('show.bs.modal', function () {
+    if (!document.getElementById('editReminderId').value) {
+        resetReminderModal();
+    }
+});
+
+/* Initialise interval row visibility on page load */
+onFreqChange();
+</script>
+{% endblock extra_scripts %}
