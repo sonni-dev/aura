@@ -67,12 +67,25 @@ class Routine(models.Model):
     A named block of items that recurs on specific days of the week,
     anchored to a time slot (morning / afternoon / evening).
  
+    reset_mode controls completion behaviour:
+      - 'daily'       → default; completion state resets at midnight.
+                        Progress is measured against today's completions.
+      - 'on_complete'  → session-based; a RoutineSession is opened the first
+                        time an item is toggled on a scheduled day, and stays
+                        open (visible on the dashboard) until ALL active items
+                        are checked off. Useful for weekly cleaning routines
+                        or any task-block that may span multiple days.
+ 
     Reminders are created separately in the reminders app and point back
     here via Reminder.routine FK — no reminder FK needed on this model.
- 
-    Examples: Weekday Morning Routine, Weekend Evening Routine,
-              Weekly Cleaning Routine.
     """
+
+    RESET_DAILY = 'daily'
+    RESET_ON_COMPLETE = 'on_complete'
+    RESET_CHOICES = [
+        (RESET_DAILY, 'Daily (resets each night)'),
+        (RESET_ON_COMPLETE, 'On Completion (stays open until all items done)'),
+    ]
 
     name = models.CharField(max_length=100)
     slot = models.CharField(max_length=10, choices=SLOT_CHOICES, default=SLOT_MORNING)
@@ -83,6 +96,17 @@ class Routine(models.Model):
         default='mon,tue,wed,thu,fri,sat,sun',
         help_text='Comma-separated day codes: mon,tue,wed,thu,fri,sat,sun'
     )
+
+    reset_mode = models.CharField(
+        max_length=15,
+        choices=RESET_CHOICES,
+        default=RESET_DAILY,
+        help_text=(
+            'Daily: progress resets each night. '
+            'On Completion: routine stays open on the dashboard until every item is checked off. '
+        ),
+    )
+
     is_active = models.BooleanField(default=True)
     order = models.PositiveIntegerField(default=0, help_text='Display order within slot on the dashboard.')
 
@@ -116,16 +140,51 @@ class Routine(models.Model):
         codes = self.get_days_list()
         return ' '.join(abbr[c] for c in abbr if c in codes)
     
+
+    # ------------ SESSION HELPERS (on_complete routines only) ------------
+
+    def get_open_session(self):
+        """Return the currently open RoutineSession, or None."""
+        return self.sessions.filter(completed_at__isnull=True).first()
+    
+    def get_or_create_session(self):
+        """
+        Return the open session if one exists, otherwise open a new one
+        anchored to today. Called lazily on first item toggle.
+        """
+        session = self.get_open_session()
+        if session is None:
+            session = RoutineSession.objects.create(
+                routine=self,
+                started_on=timezone.now().date(),
+            )
+        return session
+    
     # ------------ PROGRESS HELPERS ------------
 
-    def today_progress(self, for_date=None):
-        """Returns (completed_count, total_count) for active items today"""
+    def today_progress(self, for_date=None, session=None):
+        """
+        Returns (completed_count, total_count) for active items.
+ 
+        For daily routines:       counts completions dated today.
+        For on_complete routines: counts completions belonging to the open
+                                  session (pass session= to avoid a 2nd query).
+        """
         d = for_date or timezone.now().date()
         items = self.items.filter(is_active=True)
         total = items.count()
-        done = RoutineCompletion.objects.filter(
-            item__in=items, completed_on=d
-        ).count()
+
+        if self.reset_mode == self.RESET_ON_COMPLETE:
+            open_session = session if session is not None else self.get_open_session()
+            if open_session is None:
+                return 0, total
+            done = RoutineCompletion.objects.filter(
+                item__in=items, session=open_session
+            ).count()
+        else:
+            done = RoutineCompletion.objects.filter(
+                item__in=items, completed_on=d
+            ).count()
         return done, total
     
     def completion_pct(self, for_date=None):
@@ -138,28 +197,52 @@ class Routine(models.Model):
         """
         Count consecutive days (going backwards from yesterday) on which
         ALL active items in this routine were completed.
-        Today is not counted -- it may still be in progress.
+ 
+        For on_complete routines, counts closed sessions on scheduled days.
+        Today is not counted — it may still be in progress.
         """
-        d = (for_date or timezone.now().date()) - timedelta(days=1)
+        
         items = list(self.items.filter(is_active=True))
         item_count = len(items)
         if item_count == 0:
             return 0
         
-        streak = 0
-        # Only check days this routine was scheduled to run
-        for _ in range(365):
-            day_code = WEEKDAY_MAP[d.weekday()]
-            if day_code in self.get_days_list():
-                done = RoutineCompletion.objects.filter(
-                    item__in=items, completed_on=d
-                ).count()
-                if done >= item_count:
-                    streak += 1
-                else:
-                    break
-            d -= timedelta(days=1)
-        return streak
+        if self.reset_mode == self.RESET_ON_COMPLETE:
+            # Count closed sessions whose started_on was a scheduled day
+            d = (for_date or timezone.now().date()) - timedelta(days=1)
+
+            streak = 0
+            # Only check days this routine was scheduled to run
+            for _ in range(365):
+                day_code = WEEKDAY_MAP[d.weekday()]
+                if day_code in self.get_days_list():
+                    closed = self.sessions.filter(
+                        started_on=d,
+                        completed_at__isnull=False,
+                    ).exists()
+                    if closed:
+                        streak += 1
+                    else:
+                        break
+                d -= timedelta(days=1)
+            return streak
+        else:
+            d = (for_date or timezone.now().date()) - timedelta(days=1)
+            streak = 0
+            
+            for _ in range(365):
+                day_code = WEEKDAY_MAP[d.weekday()]
+                if day_code in self.get_days_list():
+                    done = RoutineCompletion.objects.filter(
+                        item__in=items,
+                        completed_on=d,
+                    ).exists()
+                    if done >= item_count:
+                        streak += 1
+                    else:
+                        break
+                d -= timedelta(days=1)
+            return streak
 
 
 class RoutineItem(models.Model):
@@ -188,35 +271,68 @@ class RoutineItem(models.Model):
     def __str__(self):
         return f'{self.routine.name} > {self.title}'
     
-    def is_done_today(self, for_date=None):
+    def is_done_today(self, for_date=None, session=None):
+        """
+        Returns True if this item is completed for the current period.
+ 
+        For daily routines: checks for a completion dated today.
+        For on_complete routines: checks for a completion in the given session
+          (pass session= to avoid a DB lookup; falls back to get_open_session).
+        """
+        if self.routine.reset_mode == Routine.RESET_ON_COMPLETE:
+            s = session if session is not None else self.routine.get_open_session()
+            if s is None:
+                return False
+            return RoutineCompletion.objects.filter(item=self, session=s).exists()
+        
         d = for_date or timezone.now().date()
         return RoutineCompletion.objects.filter(item=self, completed_on=d).exists()
     
-    def toggle_today(self, for_date=None):
+    def toggle_today(self, for_date=None, session=None):
         """
-        Mark complete if not done today; undo if already done. Returns new state.
+        Mark complete if not done; undo if already done. Returns new state (bool).
  
-        When marking complete (created=True), bulk-dismisses any linked
-        Reminders for today. Does NOT re-activate reminders when toggled off
-        — use the admin re-activate action if needed.
+        For on_complete routines pass the open session so we don't re-query it.
+        After marking complete, auto-closes the session if all items are done.
+ 
+        When marking complete, bulk-dismisses any linked Reminders.
+        Does NOT re-activate reminders when toggled off.
         """
 
         d = for_date or timezone.now().date()
-        completion, created = RoutineCompletion.objects.get_or_create(
-            item=self, completed_on=d
-        )
-        if not created:
-            completion.delete()
-            return False
-        
-        # Dismiss reminders tied to this specific routine item
-        self.reminders.filter(is_complete=False).update(
-            is_complete=True,
-            is_active=False,
-            completed_at=timezone.now(),
-        )
 
-        return True
+        if self.routine.reset_mode == Routine.RESET_ON_COMPLETE:
+            s = session if session is not None else self.routine.get_or_create_session()
+            existing = RoutineCompletion.objects.filter(item=self, session=s).first()
+            if existing:
+                existing.delete()
+                return False
+            else:
+                RoutineCompletion.objects.create(item=self, session=s, completed_on=d)
+                # Auto-close session if everything is done now
+                s.close_if_complete()
+                self.reminders.filter(is_complete=False).update(
+                    is_complete=True,
+                    is_active=False,
+                    completed_at=timezone.now(),
+                )
+                return True
+        else:        
+            completion, created = RoutineCompletion.objects.get_or_create(
+                item=self, completed_on=d
+            )
+            if not created:
+                completion.delete()
+                return False
+            
+            # Dismiss reminders tied to this specific routine item
+            self.reminders.filter(is_complete=False).update(
+                is_complete=True,
+                is_active=False,
+                completed_at=timezone.now(),
+            )
+
+            return True
     
     def item_streak(self, for_date=None):
         """Consecutive days this individual item was completed (before today)"""
@@ -234,10 +350,20 @@ class RoutineItem(models.Model):
 class RoutineCompletion(models.Model):
     """
     Records that a RoutineItem was completed on a specific calendar date.
-    The unique_together constraint prevents double-logging.
+ 
+    For daily routines:       session is null; unique_together prevents double-logging.
+    For on_complete routines: session is set; uniqueness is enforced in toggle_today().
     """
 
     item = models.ForeignKey(RoutineItem, on_delete=models.CASCADE, related_name='completions')
+    session = models.ForeignKey(
+        RoutineSession,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='completions',
+        help_text='Set for on_complete routines; null for daily routines.'
+    )
     completed_on = models.DateField(default=date.today)
     completed_at = models.DateTimeField(auto_now_add=True)
 
@@ -250,3 +376,50 @@ class RoutineCompletion(models.Model):
     
     def __str__(self):
         return f'{self.item} -- {self.completed_on}'
+
+
+class RoutineSession(models.Model):
+    """
+    Represents one 'run' of an on_complete Routine. Created lazily when the
+    first item is toggled on a scheduled day. Closed automatically when all
+    active items have been checked off.
+ 
+    Only used by routines with reset_mode='on_complete'. Daily routines
+    never create sessions.
+    """
+
+    routine = models.ForeignKey(Routine, on_delete=models.CASCADE, related_name='sessions')
+    started_on = models.DateField(default=date.today)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-start_on']
+        verbose_name = 'Routine Session'
+        verbose_name_plural = 'Routine Sessions'
+
+    def __str__(self):
+        status = 'open' if self.completed_at is None else 'done'
+        return f'{self.routine.name} — {self.started_on} ({status})'
+    
+
+    @property
+    def is_open(self):
+        return self.completed_at is None
+    
+    def close_if_complete(self):
+        """
+        Check whether all active items have a completion in this session.
+        If so, stamp completed_at and save. Returns True if just closed.
+        """
+        items = self.routine.items.filter(is_active=True)
+        total = items.count()
+        if total == 0:
+            return False
+        done = RoutineCompletion.objects.filter(
+            item__in=items, session=self
+        ).count()
+        if done >= total and self.completed_at is None:
+            self.completed_at = timezone.now()
+            self.save(update_fields=['completed_at'])
+            return True
+        return False
