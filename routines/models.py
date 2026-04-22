@@ -362,7 +362,7 @@ class RoutineSession(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = ['-start_on']
+        ordering = ['-started_on']
         verbose_name = 'Routine Session'
         verbose_name_plural = 'Routine Sessions'
 
