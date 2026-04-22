@@ -8,7 +8,7 @@ import json as _json
 from collections import defaultdict
 
 from tasks.models import Task
-from routines.models import Routine, RoutineCompletion, RoutineItem, WEEKDAY_MAP
+from routines.models import Routine, RoutineCompletion, RoutineItem, WEEKDAY_MAP, RoutineSession
 from goals.models import Goal, GoalItem
 from habits.models import Habit, HabitLog
 from reminders.models import Reminder
@@ -497,22 +497,28 @@ def calendar_events_api(request):
 def routine_item_toggle_api(request, item_id):
     """
     Toggle today's completion state for a single RoutineItem.
-    Returns JSON: { done: bool, routine_pct: int, routine_done: int, routine_total: int }
-    The dashboard JS calls this on checkbox click.
+    Returns JSON: { ok, done, item_id, routine_id, routine_pct, routine_done, routine_total }
+    Session-aware: for on_complete routines, creates/uses the open session.
     """
-    from routines.models import RoutineItem, RoutineCompletion
+    from routines.models import RoutineItem
     from django.shortcuts import get_object_or_404
 
     today = timezone.now().date()
     item = get_object_or_404(RoutineItem, pk=item_id, is_active=True)
+    routine = item.routine
+
+    # Resolve session once so toggle and progress share it
+    session = (
+        routine.get_or_create_session()
+        if routine.reset_mode == routine.RESET_ON_COMPLETE
+        else None
+    )
 
     # True = now done, False = un-done
-    new_state = item.toggle_today(today)
+    new_state = item.toggle_today(for_date=today, session=session)
 
-    # Recalculate parent routine progress so the UI can update the % badge
-    routine = item.routine
-    done_count, total_count = routine.today_progress(today)
-    pct = routine.completion_pct(today)
+    done_count, total_count = routine.today_progress(for_date=today, session=session)
+    pct = round((done_count / total_count) * 100) if total_count else 0
 
     return JsonResponse({
         'ok': True,
