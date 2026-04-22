@@ -345,37 +345,6 @@ class RoutineItem(models.Model):
             else:
                 break
         return streak
-    
-
-class RoutineCompletion(models.Model):
-    """
-    Records that a RoutineItem was completed on a specific calendar date.
- 
-    For daily routines:       session is null; unique_together prevents double-logging.
-    For on_complete routines: session is set; uniqueness is enforced in toggle_today().
-    """
-
-    item = models.ForeignKey(RoutineItem, on_delete=models.CASCADE, related_name='completions')
-    session = models.ForeignKey(
-        RoutineSession,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='completions',
-        help_text='Set for on_complete routines; null for daily routines.'
-    )
-    completed_on = models.DateField(default=date.today)
-    completed_at = models.DateTimeField(auto_now_add=True)
-
-    
-    class Meta:
-        unique_together = ('item', 'completed_on')
-        ordering = ['-completed_on']
-        verbose_name = 'Routine Completion'
-        verbose_name_plural = 'Routine Completions'
-    
-    def __str__(self):
-        return f'{self.item} -- {self.completed_on}'
 
 
 class RoutineSession(models.Model):
@@ -423,3 +392,37 @@ class RoutineSession(models.Model):
             self.save(update_fields=['completed_at'])
             return True
         return False
+
+
+
+class RoutineCompletion(models.Model):
+    """
+    Records that a RoutineItem was completed on a specific calendar date.
+ 
+    For daily routines:       session is null; unique_together prevents double-logging.
+    For on_complete routines: session is set; uniqueness is enforced in toggle_today().
+    """
+
+    item = models.ForeignKey(RoutineItem, on_delete=models.CASCADE, related_name='completions')
+    session = models.ForeignKey(
+        RoutineSession,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='completions',
+        help_text='Set for on_complete routines; null for daily routines.'
+    )
+    completed_on = models.DateField(default=date.today)
+    completed_at = models.DateTimeField(auto_now_add=True)
+
+    
+    class Meta:
+        unique_together = ('item', 'completed_on')
+        ordering = ['-completed_on']
+        verbose_name = 'Routine Completion'
+        verbose_name_plural = 'Routine Completions'
+    
+    def __str__(self):
+        return f'{self.item} -- {self.completed_on}'
+
+
