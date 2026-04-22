@@ -67,6 +67,16 @@ class Habit(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    backfill_days = models.PositiveSmallIntegerField(
+        default=0,
+        help_text=(
+            'How many past days the week-dot grid allows logging. '
+                    '0 = today only (default). 1 = yesterday + today. '
+                    'Set to 1 or 2 for habits like "No Deliveries" that '
+                    'can only be confirmed the following day.'
+        ),
+    )
+
     class Meta:
         ordering = ['order', 'name']
         verbose_name = 'Habit'

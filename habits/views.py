@@ -52,11 +52,14 @@ class HabitListView(ListView):
                     state = 'scale'
                 
                 week_cells.append({
-                    'day': day,
-                    'wl': wl,
-                    'state': state,
-                    'value': wl.scale_value if wl and h.metric_type == Habit.METRIC_SCALE else None,
-                })
+                'day':          day,
+                'wl':           wl,
+                'state':        state,
+                'value':        wl.scale_value if wl and h.metric_type == Habit.METRIC_SCALE else None,
+                'date_iso':     day.isoformat(),           # used by JS AJAX call
+                # Clickable if: today, OR a past day within the habit's backfill window
+                'is_clickable': (day <= today) and (today - day).days <= h.backfill_days,
+            })
         
             habits_data.append({
                 'habit': h,
@@ -160,11 +163,29 @@ class HabitDetailView(DetailView):
 @require_POST
 def habit_log_today(request, pk):
     """
-    For yn habits:    toggle yes/no. If already logged yes, un-log it.
-    For scale habits: expects { value: int } in JSON body.
+    For yn habits:    toggle yes/no for the target date.
+    For scale habits: expects { value: int, date?: 'YYYY-MM-DD' } in JSON body.
+ 
+    The optional 'date' param allows logging a past day (up to backfill_days back).
+    If 'date' is omitted or invalid, today is used.
     """
     habit = get_object_or_404(Habit, pk=pk)
     today = date.today()
+
+    # Parse optional date from request body
+    target_date = today
+    try:
+        body = json.loads(request.body)
+        raw_date = body.get('date')
+        if raw_date:
+            parsed = _date.fromisoformat(raw_date)
+            # Only allow dates within the habits backfill window
+            delta = (today - parsed).days
+            if 0 <= delta <= habit.backfill_days:
+                target_date = parsed
+            # Silently fall back to today if out of range
+    except (ValueError, TypeError, AttributeError):
+        body = {}
 
     if habit.metric_type == Habit.METRIC_YN:
         existing = habit.get_log(today)
@@ -174,28 +195,30 @@ def habit_log_today(request, pk):
             return JsonResponse({
                 'logged': False,
                 'display': '—',
-                'streak': habit.streak(today)
+                'streak': habit.streak(today),
+                'date': target_date.isoformat(),
             })
         else:
-            log = habit.log_today(yn_value=True)
+            habit.log_today(yn_value=True, for_date=target_date)
             return JsonResponse({
                 'logged': True, 
                 'display': 'yes',
-                'streak': habit.streak(today)
+                'streak': habit.streak(today),
+                'date': target_date.isoformat(),
             })
     else:
         # Scale habit - value required
         try:
-            data = json.loads(request.body)
-            value = int(data.get('value', 0))
+            value = int(body.get('value', 0))
             if not (1 <= value <= 10):
                 raise ValueError
         except (ValueError, TypeError):
             return JsonResponse({'error': 'Value must be between 1-10.'}, status=400)
         
-        log = habit.log_today(scale_value=value)
+        habit.log_today(scale_value=value, for_date=target_date)
         return JsonResponse({
             'logged': True,
             'display': str(value),
-            'streak': habit.streak(today)
+            'streak': habit.streak(today),
+            'date': target_date.isoformat(),
         })
