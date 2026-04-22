@@ -77,16 +77,16 @@ class RoutineDetailView(DetailView):
 
         # Active items annotated with today completion + individual streak
         active_items = list(routine.items.filter(is_active=True))
+        open_session = routine.get_open_session() if routine.reset_mode == Routine.RESET_ON_COMPLETE else None
         items_data = [
             {
                 'item': item,
-                'done_today': item.is_done_today(),
+                'done_today': item.is_done_today(session=open_session),
                 'streak': item.item_streak(),
             }
             for item in active_items
         ]
-
-        done, total = routine.today_progress()
+        done, total = routine.today_progress(session=open_session)
 
         ctx.update({
             'items_data': items_data,
@@ -153,10 +153,23 @@ class RoutineDetailView(DetailView):
 
 @require_POST
 def routine_item_toggle(request, pk):
-    """Toggle a RoutineItem's completion for today and return updated progress."""
+    """
+    Toggle a RoutineItem's completion for today and return updated progress.
+    Session-aware: for on_complete routines, creates/uses the open session.
+    """
     item = get_object_or_404(RoutineItem, pk=pk)
-    new_state = item.toggle_today()
-    done, total = item.routine.today_progress()
+    routine = item.routine
+
+    # Resolve session once so toggle_today and today_progress share it
+    session = (
+        routine.get_or_create_session()
+        if routine.reset_mode == Routine.RESET_ON_COMPLETE
+        else None
+    )
+
+    new_state = item.toggle_today(session=session)
+    done, total = routine.today_progress(session=session)
+    
     return JsonResponse({
         'done': new_state,
         'routine_done': done,
