@@ -210,14 +210,30 @@
                             <td class="align-middle">
                                 <div class="d-flex gap-1">
                                     {% for cell in hd.week_cells %}
+                                    {% if cell.is_clickable %}
+                                    <button type="button"
+                                            class="habit-dot-btn border-0 p-0"
+                                            data-habit-id="{{ hd.habit.pk }}"
+                                            data-date="{{ cell.date_iso }}"
+                                            data-metric="{{ hd.habit.metric_type }}"
+                                            data-habit-name="{{ hd.habit.name|escapejs }}"
+                                            title="{{ cell.day|date:'D, M j' }}{% if cell.state == 'yes' %} — ✓{% elif cell.state == 'no' %} — ✗{% elif cell.state == 'scale' %} — {{ cell.value }}/10{% else %} — click to log{% endif %}"
+                                            style="width:22px; height:22px; border-radius:3px; cursor:pointer;
+                                                   {% if cell.state == 'yes' %}background:rgba(236,72,153,0.75);
+                                                   {% elif cell.state == 'no' %}background:rgba(239,68,68,0.25);
+                                                   {% elif cell.state == 'scale' and cell.value %}background:rgba(236,72,153,{{ cell.value|floatformat:2 }}0);
+                                                   {% else %}background:rgba(255,255,255,0.07);{% endif %}
+                                                   {% if cell.day == today %}outline:2px solid rgba(236,72,153,0.5);outline-offset:1px;{% endif %}">
+                                    </button>
+                                    {% else %}
                                     <div title="{{ cell.day|date:'D, M j' }}{% if cell.state == 'yes' %} — ✓{% elif cell.state == 'no' %} — ✗{% elif cell.state == 'scale' %} — {{ cell.value }}/10{% endif %}"
                                          style="width:22px; height:22px; border-radius:3px;
-                                         {% if cell.state == 'yes' %}background:rgba(236,72,153,0.75);
-                                         {% elif cell.state == 'no' %}background:rgba(239,68,68,0.25);
-                                         {% elif cell.state == 'scale' and cell.value %}background:rgba(236,72,153,{{ cell.value|floatformat:2 }}0);
-                                         {% else %}background:rgba(255,255,255,0.05);{% endif %}
-                                         {% if cell.day == today %}outline:2px solid rgba(236,72,153,.5);outline-offset:1px;{% endif %}">
+                                                {% if cell.state == 'yes' %}background:rgba(236,72,153,0.75);
+                                                {% elif cell.state == 'no' %}background:rgba(239,68,68,0.25);
+                                                {% elif cell.state == 'scale' and cell.value %}background:rgba(236,72,153,{{ cell.value|floatformat:2 }}0);
+                                                {% else %}background:rgba(255,255,255,0.04);{% endif %}">
                                     </div>
+                                    {% endif %}
                                     {% endfor %}
                                 </div>
                             </td>
@@ -339,18 +355,18 @@
 <script>
 (function () {
     'use strict';
-
+ 
     var CSRF = document.querySelector('meta[name="csrf-token"]').content;
-
+ 
     // ── Filter state ─────────────────────────────────────────────────────
     var rows         = document.querySelectorAll('.habit-row');
     var searchEl     = document.getElementById('habitSearch');
     var tabs         = document.querySelectorAll('[data-filter]');
     var activeFilter = 'all';
     var searchTerm   = '';
-
+ 
     function rowMatchesTab(row) {
-        if (activeFilter === 'inactive')  return row.dataset.active  === 'false';
+        if (activeFilter === 'inactive')    return row.dataset.active  === 'false';
         if (row.dataset.active === 'false') return false;
         switch (activeFilter) {
             case 'all':      return true;
@@ -361,7 +377,7 @@
             default:         return true;
         }
     }
-
+ 
     function applyFilters() {
         rows.forEach(function (row) {
             var tabOk    = rowMatchesTab(row);
@@ -369,7 +385,7 @@
             row.classList.toggle('d-none', !(tabOk && searchOk));
         });
     }
-
+ 
     tabs.forEach(function (tab) {
         tab.addEventListener('click', function (e) {
             e.preventDefault();
@@ -379,43 +395,52 @@
             applyFilters();
         });
     });
-
+ 
     searchEl.addEventListener('input', function () {
         searchTerm = searchEl.value.toLowerCase().trim();
         applyFilters();
     });
-
+ 
     applyFilters();
-
-    // ── YN toggle ────────────────────────────────────────────────────────
+ 
+    // ── Shared AJAX helper ───────────────────────────────────────────────
+    function postHabitLog(habitId, targetDate, extraBody, onSuccess, onError) {
+        var body = Object.assign({ date: targetDate }, extraBody || {});
+        fetch('/habits/' + habitId + '/log/', {
+            method:  'POST',
+            headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+            body:    JSON.stringify(body),
+        })
+        .then(function (r) { return r.json(); })
+        .then(onSuccess)
+        .catch(onError || function (e) { console.error('Habit log error:', e); });
+    }
+ 
+    // ── YN toggle (circle button = today) ────────────────────────────────
     document.querySelectorAll('.habit-toggle').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            var habitId = this.dataset.habitId;
-            var icon    = this.querySelector('i');
-            var row     = this.closest('tr');
+            var habitId   = this.dataset.habitId;
+            var icon      = this.querySelector('i');
+            var row       = this.closest('tr');
             var wasLogged = icon.classList.contains('bi-check-circle-fill');
-
-            // Optimistic
+            var today     = new Date().toISOString().slice(0, 10);
+ 
+            // Optimistic update
             icon.className = wasLogged
                 ? 'bi bi-circle text-inverse text-opacity-20 fs-18px'
                 : 'bi bi-check-circle-fill text-pink fs-18px';
             row.dataset.logged = wasLogged ? 'false' : 'true';
-
-            fetch('/habits/' + habitId + '/log/', {
-                method: 'POST',
-                headers: { 'X-CSRFToken': CSRF },
-            })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                if (data.error) {
-                    // Revert
-                    icon.className = wasLogged
-                        ? 'bi bi-check-circle-fill text-pink fs-18px'
-                        : 'bi bi-circle text-inverse text-opacity-20 fs-18px';
-                    row.dataset.logged = wasLogged ? 'true' : 'false';
-                }
-            })
-            .catch(function () {
+ 
+            postHabitLog(habitId, today, {}, function (data) {
+                icon.className = data.logged
+                    ? 'bi bi-check-circle-fill text-pink fs-18px'
+                    : 'bi bi-circle text-inverse text-opacity-20 fs-18px';
+                row.dataset.logged = data.logged ? 'true' : 'false';
+                // Sync today's dot cell if it exists in the row
+                var todayDot = row.querySelector('.habit-dot-btn[data-date="' + today + '"]');
+                if (todayDot) updateDotCell(todayDot, data.logged);
+            }, function () {
+                // Revert on error
                 icon.className = wasLogged
                     ? 'bi bi-check-circle-fill text-pink fs-18px'
                     : 'bi bi-circle text-inverse text-opacity-20 fs-18px';
@@ -423,57 +448,101 @@
             });
         });
     });
-
-    // ── Scale: open modal ────────────────────────────────────────────────
+ 
+    // ── Scale: open modal (circle button = today) ────────────────────────
     document.querySelectorAll('.habit-scale-open').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            document.getElementById('scaleHabitId').value   = this.dataset.habitId;
-            document.getElementById('scaleHabitName').textContent = this.dataset.habitName;
-            document.getElementById('scaleError').classList.add('d-none');
-            document.querySelectorAll('.scale-btn').forEach(function (b) {
-                b.classList.remove('btn-pink', 'active');
-                b.classList.add('btn-outline-default');
-            });
-            var modal = new bootstrap.Modal(document.getElementById('scaleModal'));
-            modal.show();
+            openScaleModal(
+                this.dataset.habitId,
+                this.dataset.habitName,
+                new Date().toISOString().slice(0, 10)
+            );
         });
     });
-
-    // ── Scale: pick a value ──────────────────────────────────────────────
+ 
+    // ── Week dot cell clicks ─────────────────────────────────────────────
+    document.querySelectorAll('.habit-dot-btn').forEach(function (dotBtn) {
+        dotBtn.addEventListener('click', function () {
+            var habitId    = this.dataset.habitId;
+            var targetDate = this.dataset.date;
+            var metric     = this.dataset.metric;
+            var self       = this;
+ 
+            if (metric === 'yn') {
+                postHabitLog(habitId, targetDate, {}, function (data) {
+                    updateDotCell(self, data.logged);
+                    // If this is today's dot, also sync the circle button
+                    var today = new Date().toISOString().slice(0, 10);
+                    if (targetDate === today) {
+                        var row  = self.closest('tr');
+                        var icon = row && row.querySelector('.habit-toggle i');
+                        if (icon) {
+                            icon.className = data.logged
+                                ? 'bi bi-check-circle-fill text-pink fs-18px'
+                                : 'bi bi-circle text-inverse text-opacity-20 fs-18px';
+                            row.dataset.logged = data.logged ? 'true' : 'false';
+                        }
+                    }
+                });
+            } else {
+                openScaleModal(this.dataset.habitId, this.dataset.habitName, targetDate);
+            }
+        });
+    });
+ 
+    // ── Scale modal helpers ──────────────────────────────────────────────
+    var _scalePendingId   = null;
+    var _scalePendingDate = null;
+ 
+    function openScaleModal(habitId, habitName, targetDate) {
+        _scalePendingId   = habitId;
+        _scalePendingDate = targetDate;
+ 
+        var today = new Date().toISOString().slice(0, 10);
+        document.getElementById('scaleHabitId').value         = habitId;
+        document.getElementById('scaleHabitName').textContent = habitName;
+        document.getElementById('scaleModalLabel').textContent =
+            targetDate === today ? 'Log Today' : 'Log ' + targetDate;
+        document.getElementById('scaleError').classList.add('d-none');
+        document.querySelectorAll('.scale-btn').forEach(function (b) {
+            b.classList.remove('btn-pink', 'active');
+            b.classList.add('btn-outline-default');
+        });
+        new bootstrap.Modal(document.getElementById('scaleModal')).show();
+    }
+ 
     document.querySelectorAll('.scale-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            var habitId = document.getElementById('scaleHabitId').value;
-            var value   = parseInt(this.dataset.value);
-
-            // Highlight selection
+            var value = parseInt(this.dataset.value);
+ 
             document.querySelectorAll('.scale-btn').forEach(function (b) {
                 b.classList.remove('active');
             });
             this.classList.add('active');
-
-            fetch('/habits/' + habitId + '/log/', {
-                method: 'POST',
-                headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ value: value }),
-            })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
+ 
+            postHabitLog(_scalePendingId, _scalePendingDate, { value: value }, function (data) {
                 if (data.error) {
                     document.getElementById('scaleError').textContent = data.error;
                     document.getElementById('scaleError').classList.remove('d-none');
                     return;
                 }
-                // Close modal and reload to sync dots
                 bootstrap.Modal.getInstance(document.getElementById('scaleModal')).hide();
                 window.location.reload();
-            })
-            .catch(function () {
+            }, function () {
                 document.getElementById('scaleError').textContent = 'Something went wrong.';
                 document.getElementById('scaleError').classList.remove('d-none');
             });
         });
     });
-
+ 
+    // ── Dot cell visual update helper ────────────────────────────────────
+    function updateDotCell(btn, logged) {
+        btn.style.background = logged
+            ? 'rgba(236,72,153,0.75)'
+            : 'rgba(255,255,255,0.07)';
+    }
+ 
 }());
 </script>
 {% endblock extra_scripts %}
+ 
