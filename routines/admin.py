@@ -58,8 +58,8 @@ class RoutineAdmin(admin.ModelAdmin):
     @admin.display(description='Mode')
     def reset_mode_badge(self, obj):
         if obj.reset_mode == Routine.RESET_ON_COMPLETE:
-            return format_html('<span style="color:#f59e0b;">◆ session</span>')
-        return format_html('<span style="color:#6b7280;">○ daily</span>')
+            return format_html('<span style="{}">◆ session</span>', 'color:#f59e0b;')
+        return format_html('<span style="{}">○ daily</span>', 'color:#6b7280;')
 
     @admin.display(description='Days')
     def day_labels_display(self, obj):
@@ -112,8 +112,8 @@ class RoutineSessionAdmin(admin.ModelAdmin):
     @admin.display(description='Status')
     def status_display(self, obj):
         if obj.is_open:
-            return format_html('<span style="color:#f59e0b;">● Open</span>')
-        return format_html('<span style="color:#10b981;">✓ Complete</span>')
+            return format_html('<span style="{}">● Open</span>', 'color:#f59e0b;')
+        return format_html('<span style="{}">✓ Complete</span>', 'color:#10b981;')
     
     @admin.display(description='Progress')
     def items_done_display(self, obj):
