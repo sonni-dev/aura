@@ -19,7 +19,7 @@ aura.db
 
 # User-uploaded media and generated static files
 media/
-static/
+# static/
 
 # Sensitive configuration files (use environment variables instead)
 local_settings.py
