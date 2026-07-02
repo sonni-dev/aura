@@ -65,4 +65,48 @@ def create_reminder(request):
         'next_run': reminder.next_run.isoformat(),
     })
 
+@api_token_required
+@require_GET
+def due_reminders(request):
+    """Reminders due within the next N minutes (default 0 = due right now)"""
+    within_minutes = int(request.GET.get('within_minutes', 0))
+    cutoff = timezone.now() + timezone.timedelta(minutes=within_minutes)
+    qs = (
+        Reminder.objects
+        .filter(is_active=True, is_complete=False, next_run__lte=cutoff)
+        .order_by('next_run')
+    )
+    return JsonResponse({'reminders': [{
+        'id': r.pk,
+        'title': r.title,
+        'frequency': r.frequency,
+        'next_run': r.next_run.isoformat()}
+        for r in qs
+    ]})
+
+
+@api_token_required
+@require_POST
+def dismiss_reminder(request, pk):
+    """Permanently complete a reminder (one-time reminders, or ending a recurring one early)"""
+    reminder = get_object_or_404(Reminder, pk=pk)
+    reminder.dismiss(sync_source=True)
+    return JsonResponse({'dismissed': True, 'id': reminder.pk})
+
+
+@api_token_required
+@require_POST
+def advance_reminder(request, pk):
+    """For recurring reminders: push to next cycle after it fires, without completing it"""
+    reminder = get_object_or_404(Reminder, pk=pk)
+    if reminder.frequency == Reminder.FREQ_ONCE:
+        return JsonResponse({'error': 'One-time reminder - use dismiss instead'}, status=400)
+    reminder.advance_next_run()
+    return JsonResponse({
+        'advanced': True,
+        'id': reminder.pk,
+        'next_run': reminder.next_run.isoformat()
+    })
+
+
 
