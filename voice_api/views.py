@@ -109,4 +109,42 @@ def advance_reminder(request, pk):
     })
 
 
+# ── Lists ─────────────────────────────────────────────────────────────────
 
+
+@api_token_required
+@require_http_methods(['GET', 'POST'])
+def list_items(request, list_name):
+    named_list, _ = NamedList.objects.get_or_create(name=list_name.lower().strip())
+
+    if request.method == 'POST':
+        data, err = _parse_body(request)
+        if err:
+            return err
+        text = data.get('item', '').strip()
+        if not text:
+            return JsonResponse({'error': 'Item is required'}, status=400)
+        item = ListItem.objects.create(list=named_list, text=text)
+        return JsonResponse({'id': item.pk, 'item': item.text, 'list': named_list.name})
+
+    items = named_list.items.filter(is_complete=False).order_by('created_at')
+    return JsonResponse({
+        'list': named_list.name,
+        'items': [{'id': i.pk, 'item': i.text} for i in items],
+    })
+
+
+@api_token_required
+@require_POST
+def complete_list_item(request, pk):
+    item = get_object_or_404(ListItem, pk=pk)
+    item.complete()
+    return JsonResponse({'completed': True, 'id': item.pk})
+
+
+@api_token_required
+@require_POST
+def delete_list_item(request, pk):
+    item = get_object_or_404(ListItem, pk=pk)
+    item.delete()
+    return JsonResponse({'deleted': True})
