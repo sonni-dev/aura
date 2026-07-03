@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import make_aware, is_naive
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 
 
 from reminders.models import Reminder
@@ -24,7 +25,7 @@ def _parse_body(request):
 # A "timer" is just a one-time Reminder with a near-term next_run - no
 # separate model needed, the existing scheduling engine already covers it.
 
-
+@csrf_exempt
 @api_token_required
 @require_POST
 def create_reminder(request):
@@ -65,6 +66,8 @@ def create_reminder(request):
         'next_run': reminder.next_run.isoformat(),
     })
 
+
+@csrf_exempt
 @api_token_required
 @require_GET
 def due_reminders(request):
@@ -85,15 +88,18 @@ def due_reminders(request):
     ]})
 
 
+@csrf_exempt
 @api_token_required
 @require_POST
 def dismiss_reminder(request, pk):
     """Permanently complete a reminder (one-time reminders, or ending a recurring one early)"""
+    print("!!!! DISMISS VIEW ACTUALLY RUNNING !!!!", flush=True)
     reminder = get_object_or_404(Reminder, pk=pk)
     reminder.dismiss(sync_source=True)
     return JsonResponse({'dismissed': True, 'id': reminder.pk})
 
 
+@csrf_exempt
 @api_token_required
 @require_POST
 def advance_reminder(request, pk):
@@ -112,6 +118,7 @@ def advance_reminder(request, pk):
 # ── Lists ─────────────────────────────────────────────────────────────────
 
 
+@csrf_exempt
 @api_token_required
 @require_http_methods(['GET', 'POST'])
 def list_items(request, list_name):
@@ -134,6 +141,7 @@ def list_items(request, list_name):
     })
 
 
+@csrf_exempt
 @api_token_required
 @require_POST
 def complete_list_item(request, pk):
@@ -142,6 +150,7 @@ def complete_list_item(request, pk):
     return JsonResponse({'completed': True, 'id': item.pk})
 
 
+@csrf_exempt
 @api_token_required
 @require_POST
 def delete_list_item(request, pk):

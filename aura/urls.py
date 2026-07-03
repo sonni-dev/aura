@@ -26,5 +26,5 @@ urlpatterns = [
     path('goals/', include('goals.urls')),
     path('habits/', include('habits.urls')),
     path('reminders/', include('reminders.urls')),
-    path('api/', include('voice_api.urls')),
+    path('voice-api/', include('voice_api.urls')),
 ]
