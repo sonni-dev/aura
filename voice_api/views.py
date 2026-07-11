@@ -197,3 +197,56 @@ def search_reminders(request):
         for r in matches
     ]})
 
+
+@csrf_exempt
+@api_token_required
+@require_GET
+def search_list_items(request, list_name):
+    """?q=<spoken phrase> -> ranked candidate items within one named list."""
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse({'error': 'q parameter is required'}, status=400)
+
+    named_list = NamedList.objects.filter(name=list_name.lower().strip()).first()
+    if not named_list:
+        return JsonResponse({'results': []})
+
+    qs = named_list.items.filter(is_complete=False)
+    candidates = {i.text.lower(): i for i in qs}
+    matches = _fuzzy_match(query, candidates)
+
+    return JsonResponse({'results': [{'id': i.pk, 'item': i.text} for i in matches]})
+
+
+@csrf_exempt
+@api_token_required
+@require_POST
+def update_reminder(request, pk):
+    """Change a reminder's title, time, and/or recurrence"""
+    reminder = get_object_or_404(Reminder, pk=pk)
+    data, err = _parse_body(request)
+    if err:
+        return err
+
+    if 'title' in data:
+        reminder.title = data['title'].strip()
+    if 'next_run' in data:
+        parsed = parse_datetime(data['next_run'])
+        if parsed is None:
+            return JsonResponse({'error': 'Invalid next_run - expected ISO 8601'}, status=400)
+        reminder.next_run = make_aware(parsed) if is_naive(parsed) else parsed
+    if 'frequency' in data:
+        if data['frequency'] not in dict(Reminder.FREQ_CHOICES):
+            return JsonResponse({'error': f'Unknown frequency: {data['frequency']}'}, status=400)
+        reminder.frequency = data['frequency']
+    if 'interval' in data:
+        reminder.interval = max(1, int(data['interval']))
+
+
+    reminder.save()
+    return JsonResponse({
+        'id': reminder.pk,
+        'title': reminder.title,
+        'frequency': reminder.frequency,
+        'next_run': reminder.next_run.isoformat(),
+    })
