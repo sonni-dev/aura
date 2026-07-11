@@ -9,7 +9,12 @@ urlpatterns = [
     path('reminders/<int:pk>/dismiss/', views.dismiss_reminder, name='dismiss_reminder'),
     path('reminders/<int:pk>/advance/', views.advance_reminder, name='advance_reminder'),
 
+    path('reminders/search/', views.search_reminders, name='search_reminders'),
+    path('reminders/<int:pk>/update/', views.update_reminder, name='update_reminder'),
+
     path('lists/<str:list_name>/items/', views.list_items, name='list_items'),
     path('lists/items/<int:pk>/complete/', views.complete_list_item, name='complete_list_item'),
     path('lists/items/<int:pk>/delete/', views.delete_list_item, name='delete_list_item'),
+
+    path('lists/<str:list_name>/items/search/', views.search_list_items, name='search_list_items'),
 ]
