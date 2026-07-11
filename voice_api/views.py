@@ -1,4 +1,5 @@
 import json
+import difflib
 
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -157,3 +158,42 @@ def delete_list_item(request, pk):
     item = get_object_or_404(ListItem, pk=pk)
     item.delete()
     return JsonResponse({'deleted': True})
+
+
+# ── Fuzzy Matching ─────────────────────────────────────────────────────────────────
+
+
+def _fuzzy_match(query: str, candidates: dict):
+    """
+    candidates: dict of {lowercased_text: object}
+    Returns a list of matched objects, best guesses first.
+    Substring matches come first (cheap and usually exactly right for
+    short spoken phrases), then difflib close-matches on whatever's left.
+    """
+    query = query.strip().lower()
+    substring_hits = [obj for text, obj in candidates.items() if query in text]
+    substring_texts = {text for text, obj in candidates.items() if query in text}
+    remaining_texts = [t for t in candidates if t not in substring_texts]
+    close = difflib.get_close_matches(query, remaining_texts, n=5, cutoff=0.4)
+    fuzzy_hits = [candidates[t] for t in close]
+    return (substring_hits + fuzzy_hits)[:5]
+
+
+@csrf_exempt
+@api_token_required
+@require_GET
+def search_reminders(request):
+    """?q=<spoken phrase> -> ranked candidate reminders, best guess first."""
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse({'error': 'q parameter is required'}, status=400)
+
+    qs = Reminder.objects.filter(is_active=True, is_complete=False)
+    candidates = {r.title.lower(): r for r in qs}
+    matches = _fuzzy_match(query, candidates)
+
+    return JsonResponse({'results': [
+        {'id': r.pk, 'title': r.title, 'frequency': r.frequency, 'next_run': r.next_run.isoformat()}
+        for r in matches
+    ]})
+
